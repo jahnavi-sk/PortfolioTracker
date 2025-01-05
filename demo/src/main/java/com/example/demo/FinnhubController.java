@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
+
 
 @RestController
 @RequestMapping("/api")
@@ -22,6 +26,17 @@ public class FinnhubController {
     public FinnhubController(FinnhubService finnhubService, UserTickerService userTickerService) {
         this.finnhubService = finnhubService;
         this.userTickerService = userTickerService;
+    }
+
+    @PutMapping("/user/updateQStock")
+    public ResponseEntity<String> updateQStock(
+        @RequestParam int userId, 
+        @RequestParam String ticker,
+        @RequestParam int quantity) {
+        
+        System.out.println("Inside update!");
+        userTickerService.updateQuantityStock(userId,quantity,ticker);
+        return ResponseEntity.ok("Stock updated successfully!");
     }
 
     @DeleteMapping("/user/deleteStock")

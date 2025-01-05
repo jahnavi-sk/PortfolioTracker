@@ -31,5 +31,13 @@ public interface UserTickerRepository extends JpaRepository<UserTicker, Integer>
             @Param("ticker") String ticker
     );
 
+    //update user_tickers set quantity=2 where user_id = 1001 and ticker = "AAPL";
 
+    @Modifying
+    @Query(value = "UPDATE user_tickers set quantity= :quantity where user_id= :userId and ticker=:ticker", nativeQuery = true)
+    void updateQuantityStock(
+            @Param("userId") int userId,
+            @Param("quantity") int quantity,
+            @Param("ticker") String ticker
+    );
 }

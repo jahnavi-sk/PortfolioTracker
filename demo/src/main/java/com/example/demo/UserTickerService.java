@@ -43,6 +43,11 @@ public class UserTickerService {
     public void deleteStock(int userId, String ticker) {
         userTickerRepository.deleteStock(userId, ticker);
     }
+
+    @Transactional
+    public void updateQuantityStock(int userId, int quantity, String ticker) {
+        userTickerRepository.updateQuantityStock(userId,quantity,ticker);
+    }
 }
 
 
