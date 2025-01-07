@@ -40,4 +40,14 @@ public interface UserTickerRepository extends JpaRepository<UserTicker, Integer>
             @Param("quantity") int quantity,
             @Param("ticker") String ticker
     );
+
+
+    //select ticker, stock_name, buying_price, quantity from user_tickers where user_id = 1000;
+
+    @Query(value="SELECT ticker, stock_name, buying_price, quantity FROM user_tickers WHERE user_id = :userId",nativeQuery = true)
+    List<Object[]> findUserTickerDetails(@Param("userId") int userId);
+
+
+    @Query(value="SELECT ticker, stock_name, quantity FROM user_tickers WHERE user_id = :userId",nativeQuery = true)
+    List<Object[]> findQuantityDetails(@Param("userId") int userId);
 }

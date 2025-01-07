@@ -54,8 +54,6 @@ export default function SparklesPreview() {
 
         <div className="relative w-full">
 
-          
-        
           <div className="mt-2 h-[18rem] w-full bg-black flex flex-col items-center justify-center overflow-hidden rounded-md">
             <h3 className="md:text-7xl text-3xl lg:text-7xl font-bold text-center text-white relative z-20">
               Welcome !
@@ -78,7 +76,7 @@ export default function SparklesPreview() {
             </div>
           </div>
 
-          <div className="relative mt-8">
+          <div className="relative mt-10">
           <Vortex
             backgroundColor="black"
             rangeY={800}
@@ -86,10 +84,13 @@ export default function SparklesPreview() {
             baseHue={120}
             className="flex items-center flex-col justify-center px-2 md:px-10 py-4 w-full h-full"
           >
-          <div className="flex gap-40 justify-center">
+            
+          <div className="flex flex-col lg:flex lg:flex-row gap-20 lg:gap-40 justify-center">
+            
             <div 
               onClick={() => setView('login')}
-              className="border border-black/[0.2] dark:border-white/[0.2] flex flex-col items-start w-[25rem] p-4 relative h-[20rem] transition-transform transform click:scale-110 hover:scale-105 cursor-pointer"
+              className="border border-black/[0.2] dark:border-white/[0.2] flex flex-col items-start w-[15rem] ml-6 lg:ml-0
+             lg:w-[25rem] p-4 relative h-[5rem] lg:h-[20rem] transition-transform transform click:scale-110 hover:scale-105 cursor-pointer"
             >
               <Icon className="absolute h-6 w-6 -top-3 -left-3 dark:text-white text-black"  />
               <Icon className="absolute h-6 w-6 -bottom-3 -left-3 dark:text-white text-black" />
@@ -100,14 +101,16 @@ export default function SparklesPreview() {
             
             <div 
               onClick={() => setView('signup')}
-              className="border border-black/[0.2] dark:border-white/[0.2] flex flex-col items-start w-[25rem] p-4 relative h-[20rem] transition-transform transform hover:scale-105 cursor-pointer"
+              className="border border-black/[0.2] dark:border-white/[0.2] flex flex-col items-start w-[15rem] ml-6 lg:ml-0 lg:w-[25rem]
+               p-4 relative h-[5rem] lg:h-[20rem] transition-transform transform hover:scale-105 cursor-pointer"
             >
               <Icon className="absolute h-6 w-6 -top-3 -left-3 dark:text-white text-black" />
               <Icon className="absolute h-6 w-6 -bottom-3 -left-3 dark:text-white text-black" />
               <Icon className="absolute h-6 w-6 -top-3 -right-3 dark:text-white text-black" />
               <Icon className="absolute h-6 w-6 -bottom-3 -right-3 dark:text-white text-black" />
-              <EvervaultCard text="Sign Up" />
+              <EvervaultCard className="text-sm" text="Sign Up" />
             </div>
+
           </div>
           </Vortex>
           </div>

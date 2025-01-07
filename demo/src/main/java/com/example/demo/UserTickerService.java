@@ -34,6 +34,38 @@ public class UserTickerService {
                 .collect(Collectors.toList());
     }
 
+
+
+    public List<Map<String, Object>> getQuantityDetails(int userId){
+        return userTickerRepository.findQuantityDetails(userId).stream()
+                .map(record -> {
+                    Map<String, Object> details = new HashMap<>();
+                    details.put("ticker", record[0]);
+                    details.put("stockName", record[1]);
+                    details.put("quantity", record[2]);
+                    return details;
+                })
+                .collect(Collectors.toList());
+    }
+
+
+
+    public List<Map<String, Object>> getUserTickerDetails(int userId) {
+        return userTickerRepository.findUserTickerDetails(userId).stream()
+                .map(record -> {
+                    Map<String, Object> details = new HashMap<>();
+                    details.put("ticker", record[0]);
+                    details.put("stockName", record[1]);
+                    details.put("buyingPrice", record[2]);
+                    details.put("quantity", record[3]);
+                    
+                    return details;
+                })
+                .collect(Collectors.toList());
+    }
+
+
+
     @Transactional
     public void addStock(int userId, String ticker, String stockName, double buyingPrice, int quantity) {
         userTickerRepository.addNewStock(userId, ticker, stockName, buyingPrice, quantity);

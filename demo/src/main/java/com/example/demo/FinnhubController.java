@@ -63,13 +63,128 @@ public class FinnhubController {
         return ResponseEntity.ok("Stock added successfully!");
     }
 
+
+    @GetMapping("/user/quantity")
+    public List<Map<String, Object>> getQuantity(@RequestParam int userId) {
+        List<Map<String, Object>> userTickerDetails = userTickerService.getQuantityDetails(userId);
+        return userTickerDetails;
+        
+    }
+    
+
+    @GetMapping("/user/topStock")
+    public Map<String, Object> getTopStock(@RequestParam int userId) {
+        List<Map<String, Object>> userTickerDetails = userTickerService.getUserTickerDetails(userId);
+
+        // Prepare list of tickers
+        String[] tickers = userTickerDetails.stream()
+                .map(details -> (String) details.get("ticker"))
+                .toArray(String[]::new);
+
+        // Fetch stock data from Finnhub
+        Map<String, Map<String, Object>> stockData = finnhubService.getStockDataForMultipleSymbols(tickers);
+
+        // Combine user's data with stock data
+        List<Map<String, Object>> combinedResults = new ArrayList<>();
+        for (Map<String, Object> userTicker : userTickerDetails) {
+            String ticker = (String) userTicker.get("ticker");
+            Map<String, Object> stockInfo = stockData.get(ticker);
+
+            if (stockInfo != null) {
+                Map<String, Object> combined = new HashMap<>();
+                double current_price = (double) stockInfo.get("c");
+
+                // Safely convert buyingPrice to Double
+                double buyingPrice = 0.0;
+                Object buyingPriceObj = userTicker.get("buyingPrice");
+                if (buyingPriceObj instanceof Number) {
+                    buyingPrice = ((Number) buyingPriceObj).doubleValue();
+                }
+
+                Double performance = ((current_price - buyingPrice) / buyingPrice) * 100;
+
+                String name = (String) userTicker.get("stockName");
+
+                // Add extra user data to the combined result
+                combined.put("ticker", ticker);
+                combined.put("stockName", name);
+                combined.put("performance", performance);
+                combinedResults.add(combined);
+            }
+        }
+
+        // Sort by performance in descending order
+        combinedResults.sort((Map<String, Object> a, Map<String, Object> b) -> {
+            Double performanceA = (Double) a.get("performance");
+            Double performanceB = (Double) b.get("performance");
+            return performanceB.compareTo(performanceA); // Sorting in descending order
+        });
+
+        // Return the top stock's name and performance as a map
+        Map<String, Object> topStock = combinedResults.get(0);
+        Map<String, Object> result = new HashMap<>();
+        result.put("stockName", topStock.get("stockName"));
+        result.put("performance", topStock.get("performance"));
+
+        return result;
+    }
+
+
+    @GetMapping("/user/details")
+    public List<Map<String, Object>> getDetails(@RequestParam int userId){
+        //List<Map<String, Object>> userTickerDetails = userTickerService.getTickerDetailsByUserId(userId);
+        List<Map<String, Object>> userTickerDetails = userTickerService.getUserTickerDetails(userId);
+        
+        
+        // Prepare list of tickers
+        String[] tickers = userTickerDetails.stream()
+                .map(details -> (String) details.get("ticker"))
+                .toArray(String[]::new);
+
+        // Fetch stock data from Finnhub
+        Map<String, Map<String, Object>> stockData = finnhubService.getStockDataForMultipleSymbols(tickers);
+        // Combine user's data with stock data
+        List<Map<String, Object>> combinedResults = new ArrayList<>();
+        for (Map<String, Object> userTicker : userTickerDetails) {
+            String ticker = (String) userTicker.get("ticker");
+            Map<String, Object> stockInfo = stockData.get(ticker);
+        
+            if (stockInfo != null) {
+                //Map<String, Object> combined = new HashMap<>(stockInfo);
+                Map<String, Object> combined = new HashMap<>();
+                combined.put("closing price", stockInfo.get("c"));
+        
+                int quantity = (int) userTicker.get("quantity");
+        
+                // Safely convert buyingPrice to Double
+                double buyingPrice = 0.0;
+                Object buyingPriceObj = userTicker.get("buyingPrice");
+                if (buyingPriceObj instanceof Number) {
+                    buyingPrice = ((Number) buyingPriceObj).doubleValue();
+                }
+
+                String name = (String)userTicker.get("stockName");
+                // Add extra user data to the combined result
+                combined.put("ticker", ticker);
+                combined.put("stockName", name);
+                combined.put("buyingPrice", buyingPrice);
+                combined.put("quantity", quantity);
+                combinedResults.add(combined);
+            }
+        }
+        
+        //List<Map<String, Object>> userDetails = userTickerService.getUserTickerDetails(userId);
+        return combinedResults;
+    }
+
     @GetMapping("/user/stocks")
     public List<Map<String, Object>> getUserStocks(@RequestParam int userId) {
         // Fetch user's tickers, buying prices, and quantities
-        
+        System.out.println("hiii");
         List<Map<String, Object>> userTickerDetails = userTickerService.getTickerDetailsByUserId(userId);
+        //List<Map<String, Object>> userTickerDetails = userTickerService.getUserTickerDetails(userId);
 
-        
+
         // Prepare list of tickers
         String[] tickers = userTickerDetails.stream()
                 .map(details -> (String) details.get("ticker"))
@@ -83,28 +198,137 @@ public class FinnhubController {
         for (Map<String, Object> userTicker : userTickerDetails) {
             String ticker = (String) userTicker.get("ticker");
             Map<String, Object> stockInfo = stockData.get(ticker);
-
+        
             if (stockInfo != null) {
                 Map<String, Object> combined = new HashMap<>(stockInfo);
+        
                 int quantity = (int) userTicker.get("quantity");
-                double buyingPrice = (double) userTicker.get("buyingPrice");
-
-                // Calculate the current market value of the stock in the portfolio
-                double currentPrice = (double) stockInfo.get("c");  // 'c' is the current price from Finnhub
-                portfolio_value += currentPrice * quantity;  // Adding current market value to portfolio
-                
+        
+                // Safely convert buyingPrice to Double
+                double buyingPrice = 0.0;
+                Object buyingPriceObj = userTicker.get("buyingPrice");
+                if (buyingPriceObj instanceof Number) {
+                    buyingPrice = ((Number) buyingPriceObj).doubleValue();
+                }
+        
+                // Safely convert currentPrice to Double
+                double currentPrice = 0.0;
+                Object currentPriceObj = stockInfo.get("c");
+                if (currentPriceObj instanceof Number) {
+                    currentPrice = ((Number) currentPriceObj).doubleValue();
+                }
+        
+                portfolio_value += currentPrice * quantity;
+        
                 // Add extra user data to the combined result
                 combined.put("ticker", ticker);
                 combined.put("userPrice", buyingPrice);
                 combined.put("quantity", quantity);
-                
-                // Add the combined stock info to the results
+        
                 combinedResults.add(combined);
             }
         }
+        
         Map<String, Object> portfolioVal = new HashMap<>();
         portfolioVal.put("portfolio_value", portfolio_value);
         combinedResults.add(portfolioVal);
         return combinedResults;
 }
+
+    @GetMapping("/user/portfolio")
+    public Double getPortfolioValue(@RequestParam int userId) {
+    // Fetch user's tickers, buying prices, and quantities
+    System.out.println("hiii");
+    List<Map<String, Object>> userTickerDetails = userTickerService.getTickerDetailsByUserId(userId);
+
+    // Prepare list of tickers
+    String[] tickers = userTickerDetails.stream()
+            .map(details -> (String) details.get("ticker"))
+            .toArray(String[]::new);
+
+    
+    Map<String, Map<String, Object>> stockData = finnhubService.getStockDataForMultipleSymbols(tickers);
+    double portfolio_value = 0.0;
+    
+    for (Map<String, Object> userTicker : userTickerDetails) {
+        String ticker = (String) userTicker.get("ticker");
+        Map<String, Object> stockInfo = stockData.get(ticker);
+    
+        if (stockInfo != null) {
+            int quantity = (int) userTicker.get("quantity");
+            // Safely convert currentPrice to Double
+            double currentPrice = 0.0;
+            Object currentPriceObj = stockInfo.get("c");
+            if (currentPriceObj instanceof Number) {
+                currentPrice = ((Number) currentPriceObj).doubleValue();
+            }
+            portfolio_value += currentPrice * quantity;        
+        }
+    }
+    
+    
+    return portfolio_value;
+}
+
+    @GetMapping("/user/status")
+    public boolean getStatus(@RequestParam int userId) {
+        // Fetch user's tickers, buying prices, and quantities
+        System.out.println("hiii");
+        List<Map<String, Object>> userTickerDetails = userTickerService.getTickerDetailsByUserId(userId);
+       
+        // Prepare list of tickers
+        String[] tickers = userTickerDetails.stream()
+                .map(details -> (String) details.get("ticker"))
+                .toArray(String[]::new);
+
+        // Fetch stock data from Finnhub
+        Map<String, Map<String, Object>> stockData = finnhubService.getStockDataForMultipleSymbols(tickers);
+        double portfolio_value = 0.0;
+        double portfolio_user = 0.0;
+
+        // Combine user's data with stock data
+        List<Map<String, Object>> combinedResults = new ArrayList<>();
+        for (Map<String, Object> userTicker : userTickerDetails) {
+            String ticker = (String) userTicker.get("ticker");
+            Map<String, Object> stockInfo = stockData.get(ticker);
+        
+            if (stockInfo != null) {
+                Map<String, Object> combined = new HashMap<>(stockInfo);
+        
+                int quantity = (int) userTicker.get("quantity");
+        
+                // Safely convert buyingPrice to Double
+                double buyingPrice = 0.0;
+                Object buyingPriceObj = userTicker.get("buyingPrice");
+                if (buyingPriceObj instanceof Number) {
+                    buyingPrice = ((Number) buyingPriceObj).doubleValue();
+                }
+        
+                // Safely convert currentPrice to Double
+                double currentPrice = 0.0;
+                Object currentPriceObj = stockInfo.get("c");
+                if (currentPriceObj instanceof Number) {
+                    currentPrice = ((Number) currentPriceObj).doubleValue();
+                }
+        
+                portfolio_value += currentPrice * quantity;
+                portfolio_user += buyingPrice * quantity;
+                // Add extra user data to the combined result
+                combined.put("ticker", ticker);
+                combined.put("userPrice", buyingPrice);
+                combined.put("quantity", quantity);
+        
+                combinedResults.add(combined);
+            }
+        }
+        
+        if(portfolio_value>portfolio_user)
+            return false;
+        return true;
+    
+}
+
+
+
+
 }

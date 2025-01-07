@@ -1,28 +1,36 @@
 "use client";
 
-import React from 'react';
+import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '../../components/ui/button';
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { PieChart, Pie, Cell } from 'recharts';
-import { ArrowDownIcon, ArrowUpIcon } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, Pencil, Trash2 } from 'lucide-react';
+import {
+    Alert,
+    AlertDescription,
+  } from "../../components/ui/alert";
+  import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+  } from "../../components/ui/dialog"
 
 const salesData = [
-  { month: 'Jan 20', brutto: 350, netto: 100, AAPL: 243 },
-  { month: 'Feb 20', brutto: 370, netto: 280, AAPL: 244 },
-  { month: 'Mar 20', brutto: 550, netto: 400, AAPL: 224 },
-  { month: 'Apr 20', brutto: 120, netto: 300, AAPL: 256 },
-  { month: 'May 20', brutto: 800, netto: 450, AAPL: 221 },
-  { month: 'Jun 20', brutto: 350, netto: 250,AAPL: 244 },
-  { month: 'Jul 20', brutto: 250, netto: 350, AAPL: 248 },
-  { month: 'Aug 20', brutto: 350, netto: 450,AAPL: 243 },
-  { month: 'Sep 2', brutto: 15000, netto: 350,AAPL: 247},
-];
-
-const eventData = [
-  { name: 'Event 1', value: 50, color: '#3b82f6' },
-  { name: 'Event 2', value: 25, color: '#10b981' },
-  { name: 'Event 3', value: 15, color: '#fbbf24' },
-  { name: 'Event 4', value: 10, color: '#f97316' },
+  { month: '', brutto: 350, netto: 100, AAPL: 243, IBM: 342 },
+  { month: '', brutto: 370, netto: 280, AAPL: 244, IBM: 332 },
+  { month: '', brutto: 550, netto: 400, AAPL: 224, IBM: 321 },
+  { month: '', brutto: 120, netto: 300, AAPL: 256, IBM: 320 },
+  { month: '', brutto: 800, netto: 450, AAPL: 221, IBM: 370 },
+  { month: '', brutto: 350, netto: 250, AAPL: 244, IBM: 400 },
+  { month: '', brutto: 250, netto: 350, AAPL: 248, IBM: 412 },
+  { month: '', brutto: 350, netto: 450, AAPL: 243, IBM: 323 },
+  { month: '', brutto: 150, netto: 350, AAPL: 247, IBM: 322},
 ];
 
 const colors = [
@@ -37,38 +45,206 @@ const colors = [
     '#ef4444', // red
   ];
 
-export default function SalesDashboard(){
-    const dataKeys = Object.keys(salesData[0]).filter(key => key !== 'month');
+  const eventData = [
+    { ticker: 'Event 1', quantity: 1 },
+    { ticker: 'Event 2', quantity: 1 },
+    { ticker: 'Event 3', quantity: 1 },
+    { ticker: 'Event 4', quantity: 1 },
+    { ticker: 'Event 5', quantity: 1 }
+
+];
+
+
+
+interface StockDetail {
+    ticker: string;
+    stockName: string;
+    buyingPrice: number;
+    quantity: number;
+    closingPrice: number;
+  }
+
+
+export default function SalesDashboard() {
+
+    const processedEventData = React.useMemo(() => {
+        const totalQuantity = eventData.reduce((sum, event) => sum + event.quantity, 0);
+        
+        return eventData.map((event, index) => ({
+            ...event,
+            value: parseFloat(((event.quantity / totalQuantity) * 100).toFixed(1)),
+            color: colors[index % colors.length] // Assign colors from the colors array
+        }));
+    }, []);
+
+    const [details, setDetails] = useState<StockDetail[]>([
+        {
+          ticker: "AAPL",
+          stockName: "Apple Inc",
+          buyingPrice: 240.0,
+          quantity: 1,
+          closingPrice: 245
+        },
+        {
+          ticker: "GOOGL",
+          stockName: "Alphabet Inc Class C",
+          buyingPrice: 190.0,
+          quantity: 1,
+          closingPrice: 196.87
+        },
+        {
+          ticker: "MSFT",
+          stockName: "Microsoft Corp",
+          buyingPrice: 420.0,
+          quantity: 1,
+          closingPrice: 427.85
+        },
+        {
+          ticker: "ABNB",
+          stockName: "Airbnb Inc",
+          buyingPrice: 135.0,
+          quantity: 1,
+          closingPrice: 135.2
+        },
+        {
+          ticker: "ABG",
+          stockName: "Asbury Automotive Group, Inc",
+          buyingPrice: 240.0,
+          quantity: 1,
+          closingPrice: 237.05
+        },
+        {
+          ticker: "ABSI",
+          stockName: "Absci Corporation",
+          buyingPrice: 100.0,
+          quantity: 1,
+          closingPrice: 3.37
+        }
+      ]);
+    
+      const handleDelete = (ticker: string) => {
+        setDetails(details.filter(item => item.ticker !== ticker));
+      };
+    
+      const handleEdit = (ticker: string) => {
+        console.log('Edit clicked for ticker:', ticker);
+      };
+    
+      // Use explicit types for form data
+      const [formData, setFormData] = useState({
+        stockName: '',
+        ticker: '',
+        quantity: '',
+        buyingPrice: '',
+        currentPrice: null as number | null // currentPrice is either number or null
+      });
+    
+      const [showError, setShowError] = useState(false);
+      const [open, setOpen] = useState(false);
+    
+      const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+          ...prev,
+          [name]: value
+        }));
+        setShowError(false);
+      };
+    
+      const handleCheckPrice = () => {
+        if (!formData.ticker || !formData.stockName) {
+          setShowError(true);
+          return;
+        }
+        // Simulating API call with a random float value for current price (or static like 100)
+        const simulatedPrice = (Math.random() * 100 + 50).toFixed(2); // Random number between 50 and 150
+        setFormData(prev => ({
+          ...prev,
+          currentPrice: parseFloat(simulatedPrice) // Set currentPrice as a float number
+        }));
+      };
+    
+      const handleSubmit = (e: FormEvent) => {
+        e.preventDefault();
+        if (!formData.ticker || !formData.stockName) {
+          setShowError(true);
+          return;
+        }
+    
+        const newStock = {
+          ticker: formData.ticker,
+          stockName: formData.stockName,
+          buyingPrice: parseFloat(formData.buyingPrice),
+          quantity: parseInt(formData.quantity),
+          closingPrice: formData.currentPrice || parseFloat(formData.buyingPrice) // Use currentPrice if set, else fall back to buyingPrice
+        };
+    
+        setDetails(prev => {
+          const existingIndex = prev.findIndex(stock => stock.ticker === formData.ticker);
+          if (existingIndex >= 0) {
+            const updated = [...prev];
+            updated[existingIndex] = newStock;
+            return updated;
+          }
+          return [...prev, newStock];
+        });
+    
+        setFormData({
+          stockName: '',
+          ticker: '',
+          quantity: '',
+          buyingPrice: '',
+          currentPrice: null 
+        });
+        setOpen(false);
+      };
+
+      const dataKeys = Object.keys(salesData[0]).filter(key => key !== 'month');
+
+      const isPositiveChange = true;
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
+
+
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Sales Netto Card */}
+        {/* Top Performance Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">Sales netto</p>
+              <p className="text-sm text-gray-500">Performance</p>
               <div className="flex items-center space-x-2">
-                <h2 className="text-3xl font-bold">306.20€</h2>
-                <div className="flex items-center text-red-500 text-sm">
-                  <ArrowDownIcon className="h-4 w-4" />
-                  <span>1.3% than last month</span>
+                <h2 className="text-3xl font-bold">102%</h2>
+                {/* <h2 className="text-3xl font-bold">306.20€</h2> */}
+                <div className="flex items-center text-green-500 text-sm">
+                  <ArrowUpIcon className="h-4 w-4" />
+                  <span>APL is the top performing stock !</span>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Sales Brutto Card */}
+        {/* Portfolio Value Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">Sales brutto</p>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-3xl font-bold">765.20€</h2>
-                <div className="flex items-center text-red-500 text-sm">
-                  <ArrowDownIcon className="h-4 w-4" />
-                  <span>1.2% than last month</span>
-                </div>
+              <p className="text-sm text-gray-500">Portfolio Value</p>
+              <div className={`flex items-center text-sm ${isPositiveChange ? 'text-green-500' : 'text-red-500'}`}>
+                <h2 className="text-3xl text-white font-bold">765.20€</h2>
+
+                {isPositiveChange ? (
+            <ArrowUpIcon className="h-4 w-4" />
+          ) : (
+            <ArrowDownIcon className="h-4 w-4" />
+          )}
+          <span>
+            {isPositiveChange
+              ? "Portfolio Value is looking good !"
+              : "There have been some losses "
+            }
+          </span>
               </div>
             </div>
           </CardContent>
@@ -78,12 +254,97 @@ export default function SalesDashboard(){
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">Tickets</p>
+              <p className="text-sm text-gray-500">Invest More?</p>
               <div className="flex items-center space-x-2">
-                <h2 className="text-3xl font-bold">3,137</h2>
+                
+              <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="text-xl transition-transform transform hover:scale-110 active:scale-95 hover:text-lime-400">
+          Add Stock
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Stock</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="stockName">Stock Name</Label>
+            <Input
+              id="stockName"
+              name="stockName"
+              value={formData.stockName}
+              onChange={handleInputChange}
+              placeholder="Enter stock name"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ticker">Ticker</Label>
+            <Input
+              id="ticker"
+              name="ticker"
+              value={formData.ticker}
+              onChange={handleInputChange}
+              placeholder="Enter ticker symbol"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Quantity</Label>
+            <Input
+              id="quantity"
+              name="quantity"
+              type="number"
+              value={formData.quantity}
+              onChange={handleInputChange}
+              placeholder="Enter quantity"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="buyingPrice">Buying Price</Label>
+            <Input
+              id="buyingPrice"
+              name="buyingPrice"
+              type="number"
+              value={formData.buyingPrice}
+              onChange={handleInputChange}
+              placeholder="Enter buying price"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCheckPrice}
+              className="w-1/2 mr-2"
+            >
+              Check Current Price
+            </Button>
+            {formData.currentPrice && (
+              <span className="text-lg font-semibold">${formData.currentPrice}</span>
+            )}
+          </div>
+
+          {showError && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Please fill in both ticker and stock name fields!
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Button type="submit" className="w-full">
+            Submit
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+
+
                 <div className="flex items-center text-green-500 text-sm">
                   <ArrowUpIcon className="h-4 w-4" />
-                  <span>2.3% than last month</span>
+                  <span>Invest today !</span>
                 </div>
               </div>
             </div>
@@ -147,36 +408,84 @@ export default function SalesDashboard(){
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={eventData}
+                    data={processedEventData}
                     innerRadius={60}
                     outerRadius={80}
                     paddingAngle={2}
                     dataKey="value"
+                    name="ticker"
                   >
-                    {eventData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                    {processedEventData.map((entry, index) => (
+                                        <Cell 
+                                            key={`cell-${index}`} 
+                                            fill={entry.color}
+                                        />
+                                    ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="space-y-2 mt-4">
-              {eventData.map((event, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: event.color }}
-                    />
-                    <span className="text-sm text-gray-600">{event.name}</span>
-                  </div>
-                  <span className="text-sm font-medium">{event.value}%</span>
-                </div>
-              ))}
-            </div>
+                        {processedEventData.map((event, index) => (
+                            <div key={index} className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <div
+                                        className="w-3 h-3 rounded-full"
+                                        style={{ backgroundColor: event.color }}
+                                    />
+                                    <span className="text-sm text-gray-600">{event.ticker}</span>
+                                </div>
+                                <span className="text-sm font-medium">{event.value}%</span>
+                            </div>
+                        ))}
+                    </div>
           </CardContent>
         </Card>
       </div>
+
+      <CardContent>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ticker</TableHead>
+                <TableHead>Stock Name</TableHead>
+                <TableHead className="text-right">Buying Price</TableHead>
+                <TableHead className="text-right">Quantity</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {details.map((stock) => (
+                <TableRow key={stock.ticker}>
+                  <TableCell className="font-medium">{stock.ticker}</TableCell>
+                  <TableCell>{stock.stockName}</TableCell>
+                  <TableCell className="text-right">${stock.buyingPrice.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{stock.quantity}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(stock.ticker)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(stock.ticker)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
     </div>
   );
 };
