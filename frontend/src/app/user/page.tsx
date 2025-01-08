@@ -1,6 +1,7 @@
 "use client";
+import axios from 'axios';
 
-import React, { useState, FormEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '../../components/ui/button';
@@ -8,7 +9,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { PieChart, Pie, Cell } from 'recharts';
-import { ArrowDownIcon, ArrowUpIcon, Pencil, Trash2 } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, Pencil, Trash2, LogOut } from 'lucide-react';
 import {
     Alert,
     AlertDescription,
@@ -31,6 +32,7 @@ const salesData = [
   { month: '', brutto: 250, netto: 350, AAPL: 248, IBM: 412 },
   { month: '', brutto: 350, netto: 450, AAPL: 243, IBM: 323 },
   { month: '', brutto: 150, netto: 350, AAPL: 247, IBM: 322},
+  { month: '', brutto: 150, netto: 350, AAPL: 247, IBM: 322}
 ];
 
 const colors = [
@@ -66,9 +68,38 @@ interface StockDetail {
 
 
 export default function SalesDashboard() {
+    const [topStock, setTopStock] = useState({ stockName: '', performance: 0 });
+    const [portfolioValue, setPortfolioValue] = useState({ value: 0, isPositive: true });
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [topStockRes, portfolioRes, statusRes] = await Promise.all([
+                    axios.get('http://localhost:8080/api/user/topStock?userId=1000'),
+                    axios.get('http://localhost:8080/api/user/portfolio?userId=1000'),
+                    axios.get('http://localhost:8080/api/user/status?userId=1000')
+                ]);
+                setTopStock(topStockRes.data);
+                setPortfolioValue({
+                    value: portfolioRes.data.value,
+                    isPositive: statusRes.data
+                });
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    const userID = '1000';
+    
 
     const processedEventData = React.useMemo(() => {
-        const totalQuantity = eventData.reduce((sum, event) => sum + event.quantity, 0);
+    const totalQuantity = eventData.reduce((sum, event) => sum + event.quantity, 0);
+
+    
         
         return eventData.map((event, index) => ({
             ...event,
@@ -76,6 +107,11 @@ export default function SalesDashboard() {
             color: colors[index % colors.length] // Assign colors from the colors array
         }));
     }, []);
+
+    const handleLogout = () => {
+        // Add your logout logic here
+        console.log('Logging out...');
+    };
 
     const [details, setDetails] = useState<StockDetail[]>([
         {
@@ -206,7 +242,16 @@ export default function SalesDashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
 
-
+        <div className="flex justify-end">
+                <Button 
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 hover:bg-red-600"
+                    variant="destructive"
+                >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                </Button>
+            </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Top Performance Card */}
@@ -215,11 +260,11 @@ export default function SalesDashboard() {
             <div className="space-y-2">
               <p className="text-sm text-gray-500">Performance</p>
               <div className="flex items-center space-x-2">
-                <h2 className="text-3xl font-bold">102%</h2>
+                <h2 className="text-3xl font-bold">{topStock.performance.toFixed(2)}%</h2>
                 {/* <h2 className="text-3xl font-bold">306.20€</h2> */}
                 <div className="flex items-center text-green-500 text-sm">
                   <ArrowUpIcon className="h-4 w-4" />
-                  <span>APL is the top performing stock !</span>
+                  <span>{topStock.stockName} is the top performing stock !</span>
                 </div>
               </div>
             </div>
@@ -231,10 +276,10 @@ export default function SalesDashboard() {
           <CardContent className="pt-6">
             <div className="space-y-2">
               <p className="text-sm text-gray-500">Portfolio Value</p>
-              <div className={`flex items-center text-sm ${isPositiveChange ? 'text-green-500' : 'text-red-500'}`}>
-                <h2 className="text-3xl text-white font-bold">765.20€</h2>
+              <div className={`flex items-center text-sm ${portfolioValue.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                <h2 className="text-3xl text-white font-bold">{portfolioValue.value.toFixed(2)}$</h2>
 
-                {isPositiveChange ? (
+                {portfolioValue.isPositive ? (
             <ArrowUpIcon className="h-4 w-4" />
           ) : (
             <ArrowDownIcon className="h-4 w-4" />

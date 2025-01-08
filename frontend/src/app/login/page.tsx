@@ -1,16 +1,12 @@
 "use client";
 import { useState, ReactNode } from "react";
-import { TextGenerateEffect } from "../components/ui/text-generate-effect";
-import { WavyBackground } from "../components/ui/wavy-background";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import axios, {AxiosError} from "axios";
+import { TextGenerateEffect } from "../../components/ui/text-generate-effect";
+import { WavyBackground } from "../../components/ui/wavy-background";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
 
-
-const words = `Welcome to your portfolio tracker. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque sed mi eu nibh tincidunt ultricies. Nunc varius nulla non velit egestas, et convallis odio tempus. Maecenas sit amet congue augue, nec lobortis est.`;
-
-
+const words = `Oxygen gets you high. In a catastrophic emergency, we're taking giant, panicked breaths. Suddenly you become euphoric, docile. You accept your fate. It's all right here. Emergency water landing, six hundred miles an hour. Blank faces, calm as Hindu cows`;
 
 interface LabelInputContainerProps {
     children: ReactNode;
@@ -34,54 +30,9 @@ export default function AuthPage() {
   const [showSignup, setShowSignup] = useState(false);
   const [showText, setShowText] = useState(true);
 
-
-  const BASE_URL = "http://localhost:8080/api/auth";
-
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     // Handle form submission
-    try {
-      if (showSignup) {
-        // Signup request
-        
-        const response = await axios.post(`${BASE_URL}/signup`, {
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-        });
-        alert("Signup successful! Token: " + response.data);
-      } else if (showLogin) {
-        // Login request
-        var userName = formData.username;
-        var pwd = formData.username;
-        const response = await axios.post(`${BASE_URL}/login?username=${userName}&password=${pwd}`, {
-          username: formData.username,
-          password: formData.password,
-        });
-        alert("Login successful!");
-      }
-      handleClose();
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error("Error:", (error as any).response?.data || error.message);
-        alert("Error: " + ((error as any).response?.data?.message || error.message));
-      } else {
-        console.error("Unexpected error:", error);
-        alert("An unexpected error occurred");
-      }
-    }
   };
 
   const handleShowLogin = () => {
@@ -107,6 +58,7 @@ export default function AuthPage() {
        
         {showText && (
             <>
+                
                  <TextGenerateEffect words={words} />
                  <div className="flex flex-col sm:flex-row md:justify-center gap-10 mt-8">
                     <Button 
@@ -134,12 +86,16 @@ export default function AuthPage() {
               Hey, nice to meet you!
             </h2>
             <form className="my-8" onSubmit={handleSubmit}>
-              
-                <LabelInputContainer className="mb-4">
-                  <Label htmlFor="firstname">Username</Label>
+              <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mb-4">
+                <LabelInputContainer>
+                  <Label htmlFor="firstname">First name</Label>
                   <Input id="firstname" placeholder="Tyler" type="text" />
                 </LabelInputContainer>
-              
+                <LabelInputContainer>
+                  <Label htmlFor="lastname">Last name</Label>
+                  <Input id="lastname" placeholder="Durden" type="text" />
+                </LabelInputContainer>
+              </div>
               <LabelInputContainer className="mb-4">
                 <Label htmlFor="email">Email Address</Label>
                 <Input id="email" placeholder="projectmayhem@fc.com" type="email" />
@@ -152,7 +108,7 @@ export default function AuthPage() {
                 <Label htmlFor="confirmpassword">Confirm Password</Label>
                 <Input id="confirmpassword" placeholder="••••••••" type="password" />
               </LabelInputContainer>
-              <Button type="submit" className="w-full mb-4" >
+              <Button type="submit" className="w-full mb-4">
                 Sign up →
               </Button>
               <Button onClick={handleClose} variant="outline" className="w-full">
