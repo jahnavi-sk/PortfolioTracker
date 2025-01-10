@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '../../components/ui/button';
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { useRouter } from "next/navigation";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { PieChart, Pie, Cell } from 'recharts';
 import { ArrowDownIcon, ArrowUpIcon, Pencil, Trash2, LogOut } from 'lucide-react';
@@ -21,19 +22,17 @@ import {
     DialogTitle,
     DialogTrigger,
   } from "../../components/ui/dialog"
+  import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
-const salesData = [
-  { month: '', brutto: 350, netto: 100, AAPL: 243, IBM: 342 },
-  { month: '', brutto: 370, netto: 280, AAPL: 244, IBM: 332 },
-  { month: '', brutto: 550, netto: 400, AAPL: 224, IBM: 321 },
-  { month: '', brutto: 120, netto: 300, AAPL: 256, IBM: 320 },
-  { month: '', brutto: 800, netto: 450, AAPL: 221, IBM: 370 },
-  { month: '', brutto: 350, netto: 250, AAPL: 244, IBM: 400 },
-  { month: '', brutto: 250, netto: 350, AAPL: 248, IBM: 412 },
-  { month: '', brutto: 350, netto: 450, AAPL: 243, IBM: 323 },
-  { month: '', brutto: 150, netto: 350, AAPL: 247, IBM: 322},
-  { month: '', brutto: 150, netto: 350, AAPL: 247, IBM: 322}
-];
 
 const colors = [
     '#10b981', // emerald
@@ -50,7 +49,7 @@ const colors = [
   const eventData = [
     { ticker: 'Event 1', quantity: 1 },
     { ticker: 'Event 2', quantity: 1 },
-    { ticker: 'Event 3', quantity: 1 },
+    { ticker: 'Event 3', quantity: 2 },
     { ticker: 'Event 4', quantity: 1 },
     { ticker: 'Event 5', quantity: 1 }
 
@@ -66,41 +65,123 @@ interface StockDetail {
     closingPrice: number;
   }
 
+interface CloseValueData {
+    date: string;
+    [key: string]: string | number; // Allow string or number values for ticker prices
+}
+
+interface TransformedData {
+    date: string;
+    [key: string]: string | number;
+}
+
+interface QuantityData {
+    ticker: string;
+    stockName: string;
+    quantity: number;
+  }
+  
+  interface ProcessedQuantityData {
+    ticker: string;
+    quantity: number;
+    value: number;
+    color: string;
+  }
 
 export default function SalesDashboard() {
     const [topStock, setTopStock] = useState({ stockName: '', performance: 0 });
     const [portfolioValue, setPortfolioValue] = useState({ value: 0, isPositive: true });
+    const [salesData, setSalesData] = useState<TransformedData[]>([]);
+    const [quantityData, setQuantityData] = useState<QuantityData[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [tableVal, setTableVal] = useState<StockDetail[]>([]);
+    const [stockToDelete, setStockToDelete] = useState<string | null>(null);
+    const [editingStock, setEditingStock] = useState<StockDetail | null>(null);
+    const [showEditDialog, setShowEditDialog] = useState(false);
+    const [newQuantity, setNewQuantity] = useState('');
+    const [isInitializing, setIsInitializing] = useState(true);
+    const router = useRouter();
+    //const { userID } = router.
+    //const userID = '1010';
+    const [userID, setUserID] = useState<string | null>(null);
+    
+    
+    useEffect(() => {
+        // Get userId from localStorage at component mount
+        const storedUserId = localStorage.getItem('userId');
+        setUserID(storedUserId);
+    }, []);
+
+    
+    
 
     useEffect(() => {
+
+        if (!userID) return;
         const fetchData = async () => {
             try {
-                const [topStockRes, portfolioRes, statusRes] = await Promise.all([
-                    axios.get('http://localhost:8080/api/user/topStock?userId=1000'),
-                    axios.get('http://localhost:8080/api/user/portfolio?userId=1000'),
-                    axios.get('http://localhost:8080/api/user/status?userId=1000')
+                const [topStockRes, portfolioRes, statusRes, closeValuesRes, quantityRes, tableRes] = await Promise.all([
+                    axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
+                    axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
+                    axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
+                    axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`),
+                    axios.get<QuantityData[]>(`http://localhost:8080/api/user/quantity?userId=${userID}`),
+                    axios.get<StockDetail[]>(`http://localhost:8080/api/user/details?userId=${userID}`),
                 ]);
+                
                 setTopStock(topStockRes.data);
                 setPortfolioValue({
-                    value: portfolioRes.data.value,
+                    value: portfolioRes.data,
                     isPositive: statusRes.data
                 });
+
+                setQuantityData(quantityRes.data);
+                setTableVal(tableRes.data);
+
+                const transformedData = closeValuesRes.data.map(item => {
+                    const dataPoint: TransformedData = { date: item.date };
+                    Object.entries(item).forEach(([key, value]) => {
+                        if (key !== 'date' && typeof value === 'string') {
+                            dataPoint[key] = parseFloat(value);
+                        }
+                    });
+                    return dataPoint;
+                });
+                
+                setSalesData(transformedData);
                 
             } catch (error) {
                 console.error('Error fetching data:', error);
-            }
+                setError('Failed to load portfolio data');
+            }finally {
+                setIsLoading(false);
+              }
         };
 
         fetchData();
-    }, []);
+    }, [userID]);
 
-    const userID = '1000';
-    
+    const processedQuantityData = React.useMemo(() => {
+        if (!quantityData.length) return [];
+
+        const totalQuantity = quantityData.reduce((sum, item) => sum + item.quantity, 0);
+        
+        return quantityData.map((item, index) => ({
+            ticker: item.ticker,
+            quantity: item.quantity,
+            value: parseFloat(((item.quantity / totalQuantity) * 100).toFixed(1)),
+            color: colors[index % colors.length]
+        }));
+    }, [quantityData]);
+
+    const dataKeys = salesData.length > 0 
+        ? Object.keys(salesData[0]).filter(key => key !== 'date')
+        : [];
+    //const dataKeys = Object.keys(salesData[0]).filter(key => key !== 'month');
 
     const processedEventData = React.useMemo(() => {
-    const totalQuantity = eventData.reduce((sum, event) => sum + event.quantity, 0);
-
-    
-        
+        const totalQuantity = eventData.reduce((sum, event) => sum + event.quantity, 0);
         return eventData.map((event, index) => ({
             ...event,
             value: parseFloat(((event.quantity / totalQuantity) * 100).toFixed(1)),
@@ -113,58 +194,87 @@ export default function SalesDashboard() {
         console.log('Logging out...');
     };
 
-    const [details, setDetails] = useState<StockDetail[]>([
-        {
-          ticker: "AAPL",
-          stockName: "Apple Inc",
-          buyingPrice: 240.0,
-          quantity: 1,
-          closingPrice: 245
-        },
-        {
-          ticker: "GOOGL",
-          stockName: "Alphabet Inc Class C",
-          buyingPrice: 190.0,
-          quantity: 1,
-          closingPrice: 196.87
-        },
-        {
-          ticker: "MSFT",
-          stockName: "Microsoft Corp",
-          buyingPrice: 420.0,
-          quantity: 1,
-          closingPrice: 427.85
-        },
-        {
-          ticker: "ABNB",
-          stockName: "Airbnb Inc",
-          buyingPrice: 135.0,
-          quantity: 1,
-          closingPrice: 135.2
-        },
-        {
-          ticker: "ABG",
-          stockName: "Asbury Automotive Group, Inc",
-          buyingPrice: 240.0,
-          quantity: 1,
-          closingPrice: 237.05
-        },
-        {
-          ticker: "ABSI",
-          stockName: "Absci Corporation",
-          buyingPrice: 100.0,
-          quantity: 1,
-          closingPrice: 3.37
+    
+    const handleDeleteClick = (ticker: string) => {
+        setStockToDelete(ticker);
+    };
+    
+    const handleConfirmDelete = async () => {
+        if (!stockToDelete) return;
+        
+        setIsLoading(true);
+        try {
+            await axios.delete(`http://localhost:8080/api/user/deleteStock`, {
+                params: {
+                    userId: userID,
+                    ticker: stockToDelete
+                }
+            });
+    
+            // Update table data
+            setTableVal(tableVal.filter(item => item.ticker !== stockToDelete));
+    
+            // Refresh other data
+            const [topStockRes, portfolioRes, statusRes, quantityRes] = await Promise.all([
+                axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/quantity?userId=${userID}`)
+            ]);
+    
+            setTopStock(topStockRes.data);
+            setPortfolioValue({
+                value: portfolioRes.data,
+                isPositive: statusRes.data
+            });
+            setQuantityData(quantityRes.data);
+            setError('');
+        } catch (error) {
+            console.error('Error deleting stock:', error);
+            setError('Failed to delete stock. Please try again.');
         }
-      ]);
+        setIsLoading(false);
+        setStockToDelete(null);
+    };
     
-      const handleDelete = (ticker: string) => {
-        setDetails(details.filter(item => item.ticker !== ticker));
-      };
-    
-      const handleEdit = (ticker: string) => {
-        console.log('Edit clicked for ticker:', ticker);
-      };
+    const handleEdit = (ticker: string) => {
+        const stock = tableVal.find(s => s.ticker === ticker);
+        if (stock) {
+            setEditingStock(stock);
+            setNewQuantity(stock.quantity.toString());
+            setShowEditDialog(true);
+        }
+    };
+
+    const handleEditSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        if (!editingStock || !newQuantity) return;
+
+        try {
+            await axios.put(`http://localhost:8080/api/user/updateQStock`, null, {
+                params: {
+                    userId: userID,
+                    ticker: editingStock.ticker,
+                    quantity: parseInt(newQuantity)
+                }
+            });
+
+            // Update local state
+            setTableVal(prev => prev.map(stock => 
+                stock.ticker === editingStock.ticker 
+                    ? { ...stock, quantity: parseInt(newQuantity) }
+                    : stock
+            ));
+
+            setShowEditDialog(false);
+            setEditingStock(null);
+            setNewQuantity('');
+
+        } catch (error) {
+            console.error('Error updating stock:', error);
+            setError('Failed to update stock quantity. Please try again.');
+        }
+    };
     
       // Use explicit types for form data
       const [formData, setFormData] = useState({
@@ -200,48 +310,132 @@ export default function SalesDashboard() {
         }));
       };
     
-      const handleSubmit = (e: FormEvent) => {
+      const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!formData.ticker || !formData.stockName) {
           setShowError(true);
           return;
         }
-    
-        const newStock = {
-          ticker: formData.ticker,
-          stockName: formData.stockName,
-          buyingPrice: parseFloat(formData.buyingPrice),
-          quantity: parseInt(formData.quantity),
-          closingPrice: formData.currentPrice || parseFloat(formData.buyingPrice) // Use currentPrice if set, else fall back to buyingPrice
-        };
-    
-        setDetails(prev => {
-          const existingIndex = prev.findIndex(stock => stock.ticker === formData.ticker);
-          if (existingIndex >= 0) {
-            const updated = [...prev];
-            updated[existingIndex] = newStock;
-            return updated;
-          }
-          return [...prev, newStock];
-        });
-    
-        setFormData({
-          stockName: '',
-          ticker: '',
-          quantity: '',
-          buyingPrice: '',
-          currentPrice: null 
-        });
-        setOpen(false);
+      
+        try {
+          // Call the API to add the stock
+          await axios.post(`http://localhost:8080/api/user/addStock`, null, {
+            params: {
+              userId: userID, // Using the userID from your component
+              ticker: formData.ticker,
+              stockName: formData.stockName,
+              buyingPrice: parseFloat(formData.buyingPrice),
+              quantity: parseInt(formData.quantity)
+            }
+          });
+      
+          // If API call is successful, update the local state
+          const newStock = {
+            ticker: formData.ticker,
+            stockName: formData.stockName,
+            buyingPrice: parseFloat(formData.buyingPrice),
+            quantity: parseInt(formData.quantity),
+            closingPrice: formData.currentPrice || parseFloat(formData.buyingPrice)
+          };
+      
+          setTableVal(prev => {
+            const existingIndex = prev.findIndex(stock => stock.ticker === formData.ticker);
+            if (existingIndex >= 0) {
+              const updated = [...prev];
+              updated[existingIndex] = newStock;
+              return updated;
+            }
+            return [...prev, newStock];
+          });
+      
+          // Reset form and close dialog
+          setFormData({
+            stockName: '',
+            ticker: '',
+            quantity: '',
+            buyingPrice: '',
+            currentPrice: null 
+          });
+          setOpen(false);
+      
+        } catch (error) {
+          console.error('Error adding stock:', error);
+          // You might want to show an error message to the user here
+          setError('Failed to add stock. Please try again.');
+        }
       };
 
-      const dataKeys = Object.keys(salesData[0]).filter(key => key !== 'month');
+      
 
-      const isPositiveChange = true;
+
+      const LoadingCard = () => (
+        <div className="flex justify-center items-center h-24">
+            <p className="text-gray-500">Loading data...</p>
+        </div>
+    );
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
 
+<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Edit Stock Quantity</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleEditSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="quantity">New Quantity for {editingStock?.stockName}</Label>
+                            <Input
+                                id="quantity"
+                                type="number"
+                                value={newQuantity}
+                                onChange={(e) => setNewQuantity(e.target.value)}
+                                placeholder="Enter new quantity"
+                                min="1"
+                            />
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => setShowEditDialog(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="submit">
+                                Update
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+<AlertDialog open={!!stockToDelete} onOpenChange={(open) => !open && setStockToDelete(null)}>
+    <AlertDialogContent>
+        <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this stock?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This will permanently delete {stockToDelete} from your portfolio. This action cannot be undone.
+            </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-red-500 hover:bg-red-600"
+            >
+                Delete
+            </AlertDialogAction>
+        </AlertDialogFooter>
+    </AlertDialogContent>
+</AlertDialog>
+
+
+        {error && (
+                <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
         <div className="flex justify-end">
                 <Button 
                     onClick={handleLogout}
@@ -257,6 +451,7 @@ export default function SalesDashboard() {
         {/* Top Performance Card */}
         <Card>
           <CardContent className="pt-6">
+          {isLoading ? <LoadingCard /> : (
             <div className="space-y-2">
               <p className="text-sm text-gray-500">Performance</p>
               <div className="flex items-center space-x-2">
@@ -268,34 +463,39 @@ export default function SalesDashboard() {
                 </div>
               </div>
             </div>
+          )}
           </CardContent>
         </Card>
 
         {/* Portfolio Value Card */}
         <Card>
           <CardContent className="pt-6">
+          {isLoading ? <LoadingCard /> : (
             <div className="space-y-2">
               <p className="text-sm text-gray-500">Portfolio Value</p>
               <div className={`flex items-center text-sm ${portfolioValue.isPositive ? 'text-green-500' : 'text-red-500'}`}>
                 <h2 className="text-3xl text-white font-bold">{portfolioValue.value.toFixed(2)}$</h2>
 
                 {portfolioValue.isPositive ? (
+                    
             <ArrowUpIcon className="h-4 w-4" />
           ) : (
             <ArrowDownIcon className="h-4 w-4" />
           )}
           <span>
-            {isPositiveChange
+            {portfolioValue.isPositive
               ? "Portfolio Value is looking good !"
               : "There have been some losses "
             }
           </span>
               </div>
             </div>
+
+        )}
           </CardContent>
         </Card>
 
-        {/* Tickets Card */}
+        {/* Add Stock Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
@@ -370,7 +570,7 @@ export default function SalesDashboard() {
             )}
           </div>
 
-          {showError && (
+          {error && (
             <Alert variant="destructive">
               <AlertDescription>
                 Please fill in both ticker and stock name fields!
@@ -411,10 +611,16 @@ export default function SalesDashboard() {
             </CardHeader>
             <CardContent>
               <div className="h-80">
+
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                    <p>Loading data...</p>
+                </div>
+            ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={salesData}>
                     <XAxis dataKey="month" />
-                    <YAxis domain={[0, 500]} />
+                    <YAxis />
                     <Tooltip />
                     {dataKeys.map((key, index) => (
                       <Line
@@ -427,6 +633,8 @@ export default function SalesDashboard() {
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
+
+            )}
               </div>
               <div className="mt-4 flex flex-wrap gap-4">
                 {dataKeys.map((key, index) => (
@@ -443,24 +651,30 @@ export default function SalesDashboard() {
           </Card>
         </div>
 
-        {/* Event Overview */}
+        {/* Shares Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>Event Overview</CardTitle>
+            <CardTitle>Your Stock Shares Overview</CardTitle>
           </CardHeader>
           <CardContent>
+          {isLoading ? (
+                            <div className="flex justify-center items-center h-64">
+                                <p>Loading data...</p>
+                            </div>
+                        ) :( 
+                            <>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={processedEventData}
+                    data={processedQuantityData}
                     innerRadius={60}
                     outerRadius={80}
                     paddingAngle={2}
                     dataKey="value"
                     name="ticker"
                   >
-                    {processedEventData.map((entry, index) => (
+                    {processedQuantityData.map((entry, index) => (
                                         <Cell 
                                             key={`cell-${index}`} 
                                             fill={entry.color}
@@ -471,7 +685,7 @@ export default function SalesDashboard() {
               </ResponsiveContainer>
             </div>
             <div className="space-y-2 mt-4">
-                        {processedEventData.map((event, index) => (
+                        {processedQuantityData.map((event, index) => (
                             <div key={index} className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
                                     <div
@@ -484,6 +698,8 @@ export default function SalesDashboard() {
                             </div>
                         ))}
                     </div>
+                    </>
+                        )}
           </CardContent>
         </Card>
       </div>
@@ -496,45 +712,59 @@ export default function SalesDashboard() {
                 <TableHead>Ticker</TableHead>
                 <TableHead>Stock Name</TableHead>
                 <TableHead className="text-right">Buying Price</TableHead>
+                <TableHead className="text-right">Closing Price</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {details.map((stock) => (
-                <TableRow key={stock.ticker}>
-                  <TableCell className="font-medium">{stock.ticker}</TableCell>
-                  <TableCell>{stock.stockName}</TableCell>
-                  <TableCell className="text-right">${stock.buyingPrice.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">{stock.quantity}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(stock.ticker)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(stock.ticker)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-8">
+                                        Loading data...
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                tableVal.map((stock) => (
+                                    <TableRow key={stock.ticker}>
+                                        <TableCell className="font-medium">{stock.ticker}</TableCell>
+                                        <TableCell>{stock.stockName}</TableCell>
+                                        <TableCell className="text-right">
+                                            ${typeof stock.buyingPrice === 'number' 
+                                                ? stock.buyingPrice.toFixed(2) 
+                                                : '0.00'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            ${typeof stock.closingPrice === 'number' 
+                                                ? stock.closingPrice.toFixed(2) 
+                                                : '0.00'}
+                                        </TableCell>
+                                        <TableCell className="text-right">{stock.quantity}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleEdit(stock.ticker)}
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDeleteClick(stock.ticker)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
           </Table>
         </div>
       </CardContent>
     </div>
   );
 };
-
-
-
-

@@ -17,7 +17,7 @@ public class AlphaVantageController {
         this.userTickerService = userTickerService;
     }
 
-    @GetMapping("/getCloseValues")
+    @GetMapping("/api/getCloseValues")
     public List<Map<String, Object>> getCloseValues(@RequestParam int userId) {
         // Get user ticker details and extract tickers
         List<Map<String, Object>> userTickerDetails = userTickerService.getTickerDetailsByUserId(userId);
@@ -25,13 +25,15 @@ public class AlphaVantageController {
             .map(entry -> (String) entry.get("ticker"))
             .collect(Collectors.toList());
     
+        System.out.println("userTickerDetails = "+ userTickerDetails);
         // Prepare a map to store grouped close values by date
         Map<String, Map<String, String>> groupedCloseValues = new LinkedHashMap<>();
     
         // Iterate over each ticker to fetch close values
         for (String ticker : tickers) {
+
             Map<String, String> closeValues = alphaVantageService.getCloseValues(ticker);
-    
+            System.out.println("closeValues = "+ closeValues);
             // Group close values by date
             for (Map.Entry<String, String> entry : closeValues.entrySet()) {
                 String date = entry.getKey();
@@ -44,6 +46,7 @@ public class AlphaVantageController {
             }
         }
     
+
         // Now, transform the grouped data into the final response format
         List<Map<String, Object>> response = new ArrayList<>();
         for (Map.Entry<String, Map<String, String>> entry : groupedCloseValues.entrySet()) {
@@ -53,6 +56,8 @@ public class AlphaVantageController {
             response.add(dataPoint);
         }
     
+
+        System.out.println("response = "+ response);
         return response;
     }
     

@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 public class AlphaVantageService {
     private static final String API_URL = "https://www.alphavantage.co/query";
-    private static final String API_KEY= "LP5Q9DPF2YSVNFXZ";
+    private static final String API_KEY= "G6ZTQ8S7RE61SI1J";
     //private static final String API_KEY = "JFH4KC9RWIWSGRY5"; // Replace with your API key
 
     private final RestTemplate restTemplate;
@@ -57,4 +57,6 @@ public class AlphaVantageService {
             throw new RuntimeException("Failed to fetch or process data from Alpha Vantage API", e);
         }
     }
+
+
 }

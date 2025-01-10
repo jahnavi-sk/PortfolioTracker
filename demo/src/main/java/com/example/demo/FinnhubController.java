@@ -43,7 +43,6 @@ public class FinnhubController {
         @RequestParam int userId,
         @RequestParam String ticker
     ){
-        System.out.println("Inside delete!");
         userTickerService.deleteStock(userId, ticker);
         return ResponseEntity.ok("Stock deleted successfully!");
     }
@@ -151,7 +150,7 @@ public class FinnhubController {
             if (stockInfo != null) {
                 //Map<String, Object> combined = new HashMap<>(stockInfo);
                 Map<String, Object> combined = new HashMap<>();
-                combined.put("closing price", stockInfo.get("c"));
+                combined.put("closingPrice", stockInfo.get("c"));
         
                 int quantity = (int) userTicker.get("quantity");
         

@@ -65,6 +65,10 @@ public class UserTickerService {
     }
 
 
+    public Integer getID(String username){
+        return userTickerRepository.findUserID(username);
+
+    }
 
     @Transactional
     public void addStock(int userId, String ticker, String stockName, double buyingPrice, int quantity) {
