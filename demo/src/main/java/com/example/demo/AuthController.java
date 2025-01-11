@@ -25,8 +25,10 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signup(@RequestBody User user) {
         System.out.println("hey im in signup!! all good here!!!!");
-        Integer id = userTickerService.getID(user.getUsername());
+        
+        
         String token = userService.signup(user);
+        Integer id = userTickerService.getID(user.getUsername());
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("userId", id);

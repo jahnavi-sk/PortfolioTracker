@@ -127,6 +127,7 @@ public class FinnhubController {
         return result;
     }
 
+    
 
     @GetMapping("/user/details")
     public List<Map<String, Object>> getDetails(@RequestParam int userId){
@@ -320,12 +321,42 @@ public class FinnhubController {
             }
         }
         
-        if(portfolio_value>portfolio_user)
+        System.out.println("portfolio_value ="+ portfolio_value);
+        System.out.println("portfolio_user ="+ portfolio_user);
+        if(portfolio_user > portfolio_value){
+            
             return false;
+        }
         return true;
     
 }
 
+
+    @GetMapping("/stock/price")
+    public ResponseEntity<Map<String, Object>> getStockPrice(@RequestParam String symbol) {
+        try {
+            // Fetch stock data for the given symbol
+            System.out.println("symbol = "+ symbol);
+            Map<String, Object> stockData = finnhubService.getStockData(symbol);
+            System.out.println("stockData = "+ stockData);
+            System.out.println("2nd cond  = " + stockData.containsKey("c"));
+            if (stockData != null && stockData.containsKey("c")) {
+                // Extract the current price ("c" field) and return it
+                double currentPrice = (double) stockData.get("c");
+
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("symbol", symbol);
+                response.put("currentPrice", currentPrice);
+
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.status(404).body(Map.of("error", "Stock data not found for symbol: " + symbol));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "An error occurred while fetching stock data: " + e.getMessage()));
+        }
+    }
 
 
 

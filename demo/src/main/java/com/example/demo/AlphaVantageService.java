@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 public class AlphaVantageService {
     private static final String API_URL = "https://www.alphavantage.co/query";
-    private static final String API_KEY= "G6ZTQ8S7RE61SI1J";
+    private static final String API_KEY= "UEEN80MN5FNG44RV";
     //private static final String API_KEY = "JFH4KC9RWIWSGRY5"; // Replace with your API key
 
     private final RestTemplate restTemplate;

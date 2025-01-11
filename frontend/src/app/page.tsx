@@ -8,7 +8,9 @@ import { Label } from "../components/ui/label";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-const words = `Welcome to your portfolio tracker. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque sed mi eu nibh tincidunt ultricies. Nunc varius nulla non velit egestas, et convallis odio tempus. Maecenas sit amet congue augue, nec lobortis est.`;
+// const words = `Welcome to your very own portfolio tracker. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque sed mi eu nibh tincidunt ultricies. Nunc varius nulla non velit egestas, et convallis odio tempus. Maecenas sit amet congue augue, nec lobortis est.`;
+
+const words = `Welcome to your very own portfolio tracker. We values our users highly and provide you variety of options. This application is one place where you  can track all your investments. After you have added transactions to the application, you can track daily changes in your investment values. Join us today!`;
 
 interface LabelInputContainerProps {
   children: ReactNode;
@@ -21,21 +23,6 @@ const LabelInputContainer = ({ children, className = "" }: LabelInputContainerPr
   </div>
 );
 
-
-
-// export const AuthContext = createContext<{
-//   isAuthenticated: boolean;
-//   login: (token: string, userId: string) => void;
-//   logout: () => void;
-// } | null>(null);
-
-// export const useAuth = () => {
-//   const context = useContext(AuthContext);
-//   if (!context) {
-//     throw new Error('useAuth must be used within an AuthProvider');
-//   }
-//   return context;
-// };
 
 export default function AuthPage() {
   const [showLogin, setShowLogin] = useState(false);
@@ -52,25 +39,14 @@ export default function AuthPage() {
     confirmPassword: "",
   });
 
+
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const setAuthToken = (token: string, userId: string) => {
-    const expiryTime = new Date().getTime() + (60 * 1000); // 1 minute from now
-    localStorage.setItem('token', token);
-    localStorage.setItem('tokenExpiry', expiryTime.toString());
-    localStorage.setItem('userId', userId);
-
-    // Set timeout to clear auth after 1 minute
-    setTimeout(() => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('tokenExpiry');
-      localStorage.removeItem('userId');
-      router.push('/');
-    }, 60 * 1000);
-  };
+  
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,10 +64,13 @@ export default function AuthPage() {
       });
 
       const { token, userId } = response.data;
-    alert("Signup successful!");
-    setAuthToken(token, userId);
-      console.log("BEFORE PG USER ID = "+ userId);
+      
       localStorage.setItem("userId", userId);
+      console.log("BEFORE PG USER ID = "+ userId);
+    alert("Signup successful!");
+    //setAuthToken(token, userId);
+      
+      
       router.push(`/user?userId=${userId}`);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -116,7 +95,7 @@ export default function AuthPage() {
       const response = await axios.post(`${BASE_URL}/login?${params.toString()}`);
       const { token, userId } = response.data;
       localStorage.setItem("userId", userId);
-      setAuthToken(token, userId);
+      //setAuthToken(token, userId);
       alert("Login successful!");
       
      router.push(`/user?userId=${userId}`);

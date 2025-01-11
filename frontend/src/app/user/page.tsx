@@ -1,7 +1,7 @@
 "use client";
 import axios from 'axios';
 
-import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, FormEvent, ChangeEvent, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '../../components/ui/button';
@@ -46,17 +46,7 @@ const colors = [
     '#ef4444', // red
   ];
 
-  const eventData = [
-    { ticker: 'Event 1', quantity: 1 },
-    { ticker: 'Event 2', quantity: 1 },
-    { ticker: 'Event 3', quantity: 2 },
-    { ticker: 'Event 4', quantity: 1 },
-    { ticker: 'Event 5', quantity: 1 }
-
-];
-
-
-
+  
 interface StockDetail {
     ticker: string;
     stockName: string;
@@ -100,11 +90,48 @@ export default function SalesDashboard() {
     const [editingStock, setEditingStock] = useState<StockDetail | null>(null);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [newQuantity, setNewQuantity] = useState('');
-    const [isInitializing, setIsInitializing] = useState(true);
+    const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
     const router = useRouter();
+    const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
     //const { userID } = router.
     //const userID = '1010';
     const [userID, setUserID] = useState<string | null>(null);
+    const [isNewUser, setIsNewUser] = useState(false);
+    
+
+    
+    useEffect(() => {
+        // Function to handle user activity
+        const handleUserActivity = () => {
+            resetInactivityTimer();
+        };
+
+        // Add event listeners for user interactions
+        window.addEventListener('mousemove', handleUserActivity);
+        window.addEventListener('keypress', handleUserActivity);
+        window.addEventListener('click', handleUserActivity);
+        window.addEventListener('scroll', handleUserActivity);
+        window.addEventListener('touchstart', handleUserActivity);
+
+        // Initialize the timer when component mounts
+        resetInactivityTimer();
+
+        // Cleanup function
+        return () => {
+            // Remove all event listeners
+            window.removeEventListener('mousemove', handleUserActivity);
+            window.removeEventListener('keypress', handleUserActivity);
+            window.removeEventListener('click', handleUserActivity);
+            window.removeEventListener('scroll', handleUserActivity);
+            window.removeEventListener('touchstart', handleUserActivity);
+
+            // Clear the timeout if component unmounts
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+            }
+        };
+    }, []); 
+
     
     
     useEffect(() => {
@@ -117,50 +144,67 @@ export default function SalesDashboard() {
     
 
     useEffect(() => {
-
         if (!userID) return;
+    
+        let isNew = false;
         const fetchData = async () => {
             try {
-                const [topStockRes, portfolioRes, statusRes, closeValuesRes, quantityRes, tableRes] = await Promise.all([
-                    axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
-                    axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
-                    axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
-                    axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`),
-                    axios.get<QuantityData[]>(`http://localhost:8080/api/user/quantity?userId=${userID}`),
-                    axios.get<StockDetail[]>(`http://localhost:8080/api/user/details?userId=${userID}`),
+                const [
+                    topStockRes,
+                    portfolioRes,
+                    statusRes,
+                    closeValuesRes,
+                    quantityRes,
+                    tableRes,
+                ] = await Promise.all([
+                    axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
+                    axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
+                    axios.get(`http://localhost:8080/api/user/status?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
+                    axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
+                    axios.get<QuantityData[]>(`http://localhost:8080/api/user/quantity?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
+                    axios.get<StockDetail[]>(`http://localhost:8080/api/user/details?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
                 ]);
-                
-                setTopStock(topStockRes.data);
-                setPortfolioValue({
-                    value: portfolioRes.data,
-                    isPositive: statusRes.data
-                });
-
-                setQuantityData(quantityRes.data);
-                setTableVal(tableRes.data);
-
-                const transformedData = closeValuesRes.data.map(item => {
-                    const dataPoint: TransformedData = { date: item.date };
-                    Object.entries(item).forEach(([key, value]) => {
-                        if (key !== 'date' && typeof value === 'string') {
-                            dataPoint[key] = parseFloat(value);
-                        }
+    
+                // Handle the results, skipping null responses
+                isNew = tableRes?.data?.length === 0 || false;
+                setIsNewUser(isNew);
+    
+                if (topStockRes) setTopStock(topStockRes.data);
+                if (portfolioRes && statusRes) {
+                    setPortfolioValue({
+                        value: portfolioRes.data,
+                        isPositive: statusRes.data,
                     });
-                    return dataPoint;
-                });
-                
-                setSalesData(transformedData);
-                
+                }
+                if (quantityRes) setQuantityData(quantityRes.data);
+                if (tableRes) setTableVal(tableRes.data);
+    
+                if (closeValuesRes) {
+                    const transformedData = closeValuesRes.data.map(item => {
+                        const dataPoint: TransformedData = { date: item.date };
+                        Object.entries(item).forEach(([key, value]) => {
+                            if (key !== 'date' && typeof value === 'string') {
+                                dataPoint[key] = parseFloat(value);
+                            }
+                        });
+                        return dataPoint;
+                    });
+                    setSalesData(transformedData);
+                }
+    
             } catch (error) {
                 console.error('Error fetching data:', error);
-                setError('Failed to load portfolio data');
-            }finally {
+                if (!isNew) {
+                    setError('Failed to load portfolio data');
+                }
+            } finally {
                 setIsLoading(false);
-              }
+            }
         };
-
+    
         fetchData();
     }, [userID]);
+    
 
     const processedQuantityData = React.useMemo(() => {
         if (!quantityData.length) return [];
@@ -180,19 +224,30 @@ export default function SalesDashboard() {
         : [];
     //const dataKeys = Object.keys(salesData[0]).filter(key => key !== 'month');
 
-    const processedEventData = React.useMemo(() => {
-        const totalQuantity = eventData.reduce((sum, event) => sum + event.quantity, 0);
-        return eventData.map((event, index) => ({
-            ...event,
-            value: parseFloat(((event.quantity / totalQuantity) * 100).toFixed(1)),
-            color: colors[index % colors.length] // Assign colors from the colors array
-        }));
-    }, []);
+    
 
     const handleLogout = () => {
         // Add your logout logic here
-        console.log('Logging out...');
+        if (inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current);
+        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenExpiry');
+        localStorage.removeItem('userId');
+        router.push('/');
     };
+
+
+    const resetInactivityTimer = () => {
+        if (inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current);
+        }
+
+        inactivityTimerRef.current = setTimeout(() => {
+            handleLogout();
+        }, 60000); // 1 minute
+    };
+
 
     
     const handleDeleteClick = (ticker: string) => {
@@ -215,12 +270,20 @@ export default function SalesDashboard() {
             setTableVal(tableVal.filter(item => item.ticker !== stockToDelete));
     
             // Refresh other data
-            const [topStockRes, portfolioRes, statusRes, quantityRes] = await Promise.all([
+            const [
+                topStockRes,
+                portfolioRes,
+                statusRes,
+                quantityRes,
+                closeValuesRes
+            ] = await Promise.all([
                 axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
                 axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
                 axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
-                axios.get(`http://localhost:8080/api/user/quantity?userId=${userID}`)
+                axios.get(`http://localhost:8080/api/user/quantity?userId=${userID}`),
+                axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`)
             ]);
+    
     
             setTopStock(topStockRes.data);
             setPortfolioValue({
@@ -228,6 +291,18 @@ export default function SalesDashboard() {
                 isPositive: statusRes.data
             });
             setQuantityData(quantityRes.data);
+            if (closeValuesRes.data) {
+                const transformedData = closeValuesRes.data.map(item => {
+                    const dataPoint: TransformedData = { date: item.date };
+                    Object.entries(item).forEach(([key, value]) => {
+                        if (key !== 'date' && typeof value === 'string') {
+                            dataPoint[key] = parseFloat(value);
+                        }
+                    });
+                    return dataPoint;
+                });
+                setSalesData(transformedData);
+            }
             setError('');
         } catch (error) {
             console.error('Error deleting stock:', error);
@@ -270,6 +345,22 @@ export default function SalesDashboard() {
             setEditingStock(null);
             setNewQuantity('');
 
+
+            const [topStockRes, portfolioRes, statusRes, quantityRes] = await Promise.all([
+                axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/quantity?userId=${userID}`)
+            ]);
+    
+            setTopStock(topStockRes.data);
+            setPortfolioValue({
+                value: portfolioRes.data,
+                isPositive: statusRes.data
+            });
+            setQuantityData(quantityRes.data);
+            setError('');
+
         } catch (error) {
             console.error('Error updating stock:', error);
             setError('Failed to update stock quantity. Please try again.');
@@ -297,73 +388,149 @@ export default function SalesDashboard() {
         setShowError(false);
       };
     
-      const handleCheckPrice = () => {
+    //   const handleCheckPrice = () => {
+    //     if (!formData.ticker || !formData.stockName) {
+    //       setShowError(true);
+    //       return;
+    //     }
+    //     // Simulating API call with a random float value for current price (or static like 100)
+    //     const simulatedPrice = (Math.random() * 100 + 50).toFixed(2); // Random number between 50 and 150
+    //     setFormData(prev => ({
+    //       ...prev,
+    //       currentPrice: parseFloat(simulatedPrice) // Set currentPrice as a float number
+    //     }));
+    //   };
+
+    const handleCheckPrice = async () => {
         if (!formData.ticker || !formData.stockName) {
           setShowError(true);
           return;
         }
-        // Simulating API call with a random float value for current price (or static like 100)
-        const simulatedPrice = (Math.random() * 100 + 50).toFixed(2); // Random number between 50 and 150
-        setFormData(prev => ({
-          ...prev,
-          currentPrice: parseFloat(simulatedPrice) // Set currentPrice as a float number
-        }));
+        try {
+          // Reset error state before making the API call
+          setShowError(false);
+            console.log("here babe!!")
+         //http://localhost:8080/api/stock/price?symbol=AAPL
+          const response = await axios.get(`http://localhost:8080/api/stock/price?symbol=${formData.ticker}`)
+          console.log("responese = " + response.data);
+          
+          if (response.data.error) {
+            throw new Error("Failed to fetch stock price. Please check the ticker symbol.");
+          }
+      
+          if (response.data && response.data.currentPrice) {
+            setFormData((prev) => ({
+              ...prev,
+              currentPrice: parseFloat(response.data.currentPrice)
+              
+            }));
+
+            
+          } else {
+            throw new Error("Invalid response from API: Missing current price");
+          }
+        } catch (error) {
+          console.error("Error fetching stock price:", error);
+          alert("Error: Unable to fetch stock price. Please try again.");
+        }
+        console.log("hi")
       };
+      
     
       const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!formData.ticker || !formData.stockName) {
-          setShowError(true);
-          return;
+            setShowError(true);
+            return;
         }
-      
+    
         try {
-          // Call the API to add the stock
-          await axios.post(`http://localhost:8080/api/user/addStock`, null, {
-            params: {
-              userId: userID, // Using the userID from your component
-              ticker: formData.ticker,
-              stockName: formData.stockName,
-              buyingPrice: parseFloat(formData.buyingPrice),
-              quantity: parseInt(formData.quantity)
+            // First get the current price
+            const priceResponse = await axios.get(`http://localhost:8080/api/stock/price?symbol=${formData.ticker}`);
+            
+            // Add the stock using the current price
+            await axios.post(`http://localhost:8080/api/user/addStock`, null, {
+                params: {
+                    userId: userID,
+                    ticker: formData.ticker,
+                    stockName: formData.stockName,
+                    buyingPrice: parseFloat(priceResponse.data.currentPrice),
+                    quantity: parseInt(formData.quantity)
+                }
+            });
+    
+            // Update local table state
+            const newStock = {
+                ticker: formData.ticker,
+                stockName: formData.stockName,
+                buyingPrice: parseFloat(priceResponse.data.currentPrice),
+                quantity: parseInt(formData.quantity),
+                closingPrice: parseFloat(priceResponse.data.currentPrice)
+            };
+    
+            setTableVal(prev => {
+                const existingIndex = prev.findIndex(stock => stock.ticker === formData.ticker);
+                if (existingIndex >= 0) {
+                    const updated = [...prev];
+                    updated[existingIndex] = newStock;
+                    return updated;
+                }
+                return [...prev, newStock];
+            });
+    
+            // Fetch all updated data
+            const [
+                topStockRes,
+                portfolioRes,
+                statusRes,
+                quantityRes,
+                closeValuesRes
+            ] = await Promise.all([
+                axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/quantity?userId=${userID}`),
+                axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`)
+            ]);
+    
+            // Update all the states with fresh data
+            setTopStock(topStockRes.data);
+            setPortfolioValue({
+                value: portfolioRes.data,
+                isPositive: statusRes.data
+            });
+            setQuantityData(quantityRes.data);
+    
+            // Update sales data
+            if (closeValuesRes.data) {
+                const transformedData = closeValuesRes.data.map(item => {
+                    const dataPoint: TransformedData = { date: item.date };
+                    Object.entries(item).forEach(([key, value]) => {
+                        if (key !== 'date' && typeof value === 'string') {
+                            dataPoint[key] = parseFloat(value);
+                        }
+                    });
+                    return dataPoint;
+                });
+                setSalesData(transformedData);
             }
-          });
-      
-          // If API call is successful, update the local state
-          const newStock = {
-            ticker: formData.ticker,
-            stockName: formData.stockName,
-            buyingPrice: parseFloat(formData.buyingPrice),
-            quantity: parseInt(formData.quantity),
-            closingPrice: formData.currentPrice || parseFloat(formData.buyingPrice)
-          };
-      
-          setTableVal(prev => {
-            const existingIndex = prev.findIndex(stock => stock.ticker === formData.ticker);
-            if (existingIndex >= 0) {
-              const updated = [...prev];
-              updated[existingIndex] = newStock;
-              return updated;
-            }
-            return [...prev, newStock];
-          });
-      
-          // Reset form and close dialog
-          setFormData({
-            stockName: '',
-            ticker: '',
-            quantity: '',
-            buyingPrice: '',
-            currentPrice: null 
-          });
-          setOpen(false);
-      
+    
+            // Reset form and close dialog
+            setFormData({
+                stockName: '',
+                ticker: '',
+                quantity: '',
+                buyingPrice: '',
+                currentPrice: null
+            });
+            setOpen(false);
+            setError('');
+    
         } catch (error) {
-          console.error('Error adding stock:', error);
-          // You might want to show an error message to the user here
-          setError('Failed to add stock. Please try again.');
+            console.error('Error adding stock:', error);
+            setError('Failed to add stock. Please try again.');
         }
-      };
+    };
 
       
 
@@ -374,6 +541,33 @@ export default function SalesDashboard() {
         </div>
     );
 
+
+
+
+    const EmptyChart = () => (
+        <div className="h-80 flex flex-col items-center justify-center text-gray-500">
+            <p className="text-lg mb-2">No stock data available yet</p>
+            <p className="text-sm">Add stocks to see your portfolio performance</p>
+        </div>
+    );
+
+    const EmptyPieChart = () => (
+        <div className="h-64 flex flex-col items-center justify-center text-gray-500">
+            <p className="text-lg mb-2">No shares data</p>
+            <p className="text-sm">Your stock distribution will appear here</p>
+        </div>
+    );
+
+    const EmptyTable = () => (
+        <TableRow>
+            <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <p className="text-lg mb-2">No stocks in your portfolio</p>
+                <p className="text-sm">Click "Add Stock" to get started</p>
+            </TableCell>
+        </TableRow>
+    );
+
+    
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
 
@@ -450,50 +644,47 @@ export default function SalesDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Top Performance Card */}
         <Card>
-          <CardContent className="pt-6">
-          {isLoading ? <LoadingCard /> : (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500">Performance</p>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-3xl font-bold">{topStock.performance.toFixed(2)}%</h2>
-                {/* <h2 className="text-3xl font-bold">306.20€</h2> */}
-                <div className="flex items-center text-green-500 text-sm">
-                  <ArrowUpIcon className="h-4 w-4" />
-                  <span>{topStock.stockName} is the top performing stock !</span>
-                </div>
-              </div>
-            </div>
-          )}
-          </CardContent>
-        </Card>
+                    <CardContent className="pt-6">
+                        <div className="space-y-2">
+                            <p className="text-sm text-gray-500">Performance</p>
+                            <div className="flex items-center space-x-2">
+                                <h2 className="text-3xl font-bold">
+                                    {isNewUser ? "0.00%" : `${topStock.performance.toFixed(2)}%`}
+                                </h2>
+                                <div className="flex items-center text-gray-500 text-sm">
+                                    {isNewUser ? (
+                                        "Add stocks to track performance"
+                                    ) : (
+                                        <>
+                                            <ArrowUpIcon className="h-4 w-4" />
+                                            <span>{topStock.stockName} is the top performing stock!</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
         {/* Portfolio Value Card */}
         <Card>
-          <CardContent className="pt-6">
-          {isLoading ? <LoadingCard /> : (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500">Portfolio Value</p>
-              <div className={`flex items-center text-sm ${portfolioValue.isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                <h2 className="text-3xl text-white font-bold">{portfolioValue.value.toFixed(2)}$</h2>
-
-                {portfolioValue.isPositive ? (
-                    
-            <ArrowUpIcon className="h-4 w-4" />
-          ) : (
-            <ArrowDownIcon className="h-4 w-4" />
-          )}
-          <span>
-            {portfolioValue.isPositive
-              ? "Portfolio Value is looking good !"
-              : "There have been some losses "
-            }
-          </span>
-              </div>
-            </div>
-
-        )}
-          </CardContent>
-        </Card>
+                    <CardContent className="pt-6">
+                        <div className="space-y-2">
+                            <p className="text-sm text-gray-500">Portfolio Value</p>
+                            <div className="flex items-center space-x-2">
+                                <h2 className="text-3xl font-bold">
+                                    {isNewUser ? "$0.00" : `$${portfolioValue.value.toFixed(2)}`}
+                                </h2>
+                                {!isNewUser && (
+                                    <div className={`flex items-center text-sm ${portfolioValue.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                                        {portfolioValue.isPositive ? <ArrowUpIcon className="h-4 w-4" /> : <ArrowDownIcon className="h-4 w-4" />}
+                                        <span>{portfolioValue.isPositive ? "Portfolio Value is looking good!" : "There have been some losses"}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
         {/* Add Stock Card */}
         <Card>
@@ -544,7 +735,7 @@ export default function SalesDashboard() {
               placeholder="Enter quantity"
             />
           </div>
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="buyingPrice">Buying Price</Label>
             <Input
               id="buyingPrice"
@@ -554,7 +745,7 @@ export default function SalesDashboard() {
               onChange={handleInputChange}
               placeholder="Enter buying price"
             />
-          </div>
+          </div> */}
           
           <div className="flex justify-between items-center">
             <Button
@@ -570,7 +761,7 @@ export default function SalesDashboard() {
             )}
           </div>
 
-          {error && (
+          {showError && (
             <Alert variant="destructive">
               <AlertDescription>
                 Please fill in both ticker and stock name fields!
@@ -616,7 +807,7 @@ export default function SalesDashboard() {
                 <div className="flex justify-center items-center h-64">
                     <p>Loading data...</p>
                 </div>
-            ) : (
+            ) : salesData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={salesData}>
                     <XAxis dataKey="month" />
@@ -633,7 +824,9 @@ export default function SalesDashboard() {
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
-
+                ) : (
+                    <EmptyChart />
+                
             )}
               </div>
               <div className="mt-4 flex flex-wrap gap-4">
@@ -661,28 +854,29 @@ export default function SalesDashboard() {
                             <div className="flex justify-center items-center h-64">
                                 <p>Loading data...</p>
                             </div>
-                        ) :( 
+                        ) : quantityData.length > 0 ? ( 
                             <>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={processedQuantityData}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                    name="ticker"
-                  >
-                    {processedQuantityData.map((entry, index) => (
-                                        <Cell 
-                                            key={`cell-${index}`} 
-                                            fill={entry.color}
+                                <div className="h-64">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                    <Pie
+                                        data={processedQuantityData}
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={2}
+                                        dataKey="value"
+                                        name="ticker"
+                                    >
+                                        {processedQuantityData.map((entry, index) => (
+                                                            <Cell 
+                                                                key={`cell-${index}`} 
+                                                                fill={entry.color}
                                         />
                                     ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
+              
             </div>
             <div className="space-y-2 mt-4">
                         {processedQuantityData.map((event, index) => (
@@ -699,6 +893,8 @@ export default function SalesDashboard() {
                         ))}
                     </div>
                     </>
+                      ):(
+                        <EmptyPieChart />
                         )}
           </CardContent>
         </Card>
@@ -724,7 +920,7 @@ export default function SalesDashboard() {
                                         Loading data...
                                     </TableCell>
                                 </TableRow>
-                            ) : (
+                            ) : tableVal.length > 0 ? (
                                 tableVal.map((stock) => (
                                     <TableRow key={stock.ticker}>
                                         <TableCell className="font-medium">{stock.ticker}</TableCell>
@@ -760,6 +956,8 @@ export default function SalesDashboard() {
                                         </TableCell>
                                     </TableRow>
                                 ))
+                            ):(
+                                <EmptyTable />
                             )}
                         </TableBody>
           </Table>

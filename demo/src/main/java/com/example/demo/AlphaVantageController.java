@@ -25,7 +25,7 @@ public class AlphaVantageController {
             .map(entry -> (String) entry.get("ticker"))
             .collect(Collectors.toList());
     
-        System.out.println("userTickerDetails = "+ userTickerDetails);
+       // System.out.println("userTickerDetails = "+ userTickerDetails);
         // Prepare a map to store grouped close values by date
         Map<String, Map<String, String>> groupedCloseValues = new LinkedHashMap<>();
     
@@ -33,7 +33,7 @@ public class AlphaVantageController {
         for (String ticker : tickers) {
 
             Map<String, String> closeValues = alphaVantageService.getCloseValues(ticker);
-            System.out.println("closeValues = "+ closeValues);
+            //System.out.println("closeValues = "+ closeValues);
             // Group close values by date
             for (Map.Entry<String, String> entry : closeValues.entrySet()) {
                 String date = entry.getKey();
