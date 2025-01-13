@@ -142,6 +142,68 @@ export default function SalesDashboard() {
 
     
     
+    // useEffect(() => {
+    //     if (!userID) return;
+    
+    //     let isNew = false;
+    //     const fetchData = async () => {
+    //         try {
+    //             const [
+    //                 topStockRes,
+    //                 portfolioRes,
+    //                 statusRes,
+    //                 closeValuesRes,
+    //                 quantityRes,
+    //                 tableRes,
+    //             ] = await Promise.all([
+    //                 axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
+    //                 axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
+    //                 axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
+    //                 axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`),
+    //                 axios.get<QuantityData[]>(`http://localhost:8080/api/user/quantity?userId=${userID}`),
+    //                 axios.get<StockDetail[]>(`http://localhost:8080/api/user/details?userId=${userID}`)
+    //             ]);
+    
+    //             // Update isNewUser based on table data
+    //             isNew = !tableRes.data || tableRes.data.length === 0;
+    //             setIsNewUser(isNew);
+    
+    //             // Always update the states, even if the user is new
+    //             setTopStock(topStockRes.data || { stockName: '', performance: 0 });
+    //             setPortfolioValue({
+    //                 value: portfolioRes.data || 0,
+    //                 isPositive: statusRes.data || true
+    //             });
+    //             setQuantityData(quantityRes.data || []);
+    //             setTableVal(tableRes.data || []);
+    
+    //             if (closeValuesRes.data) {
+    //                 const transformedData = closeValuesRes.data.map(item => {
+    //                     const dataPoint: TransformedData = { date: item.date };
+    //                     Object.entries(item).forEach(([key, value]) => {
+    //                         if (key !== 'date' && typeof value === 'string') {
+    //                             dataPoint[key] = parseFloat(value);
+    //                         }
+    //                     });
+    //                     return dataPoint;
+    //                 });
+    //                 setSalesData(transformedData);
+    //             }
+    
+    //         } catch (error) {
+    //             console.error('Error fetching data:', error);
+    //             if (!isNew) {
+    //                 setError('Failed to load portfolio data');
+    //             }
+    //         } finally {
+    //             setIsLoading(false);
+    //         }
+    //     };
+    
+    //     fetchData();
+    // }, [userID]);
+
+
 
     useEffect(() => {
         if (!userID) return;
@@ -157,29 +219,28 @@ export default function SalesDashboard() {
                     quantityRes,
                     tableRes,
                 ] = await Promise.all([
-                    axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
-                    axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
-                    axios.get(`http://localhost:8080/api/user/status?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
-                    axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
-                    axios.get<QuantityData[]>(`http://localhost:8080/api/user/quantity?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
-                    axios.get<StockDetail[]>(`http://localhost:8080/api/user/details?userId=${userID}`).catch(err => err.response?.status === 403 ? null : Promise.reject(err)),
+                    axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
+                    axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
+                    axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
+                    axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`),
+                    axios.get<QuantityData[]>(`http://localhost:8080/api/user/quantity?userId=${userID}`),
+                    axios.get<StockDetail[]>(`http://localhost:8080/api/user/details?userId=${userID}`)
                 ]);
     
-                // Handle the results, skipping null responses
-                isNew = tableRes?.data?.length === 0 || false;
+                // Update isNewUser based on table data
+                isNew = !tableRes.data || tableRes.data.length === 0;
                 setIsNewUser(isNew);
     
-                if (topStockRes) setTopStock(topStockRes.data);
-                if (portfolioRes && statusRes) {
-                    setPortfolioValue({
-                        value: portfolioRes.data,
-                        isPositive: statusRes.data,
-                    });
-                }
-                if (quantityRes) setQuantityData(quantityRes.data);
-                if (tableRes) setTableVal(tableRes.data);
+                // Always update the states, even if the user is new
+                setTopStock(topStockRes.data || { stockName: '', performance: 0 });
+                setPortfolioValue({
+                    value: portfolioRes.data || 0,
+                    isPositive: statusRes.data || true
+                });
+                setQuantityData(quantityRes.data || []);
+                setTableVal(tableRes.data || []);
     
-                if (closeValuesRes) {
+                if (closeValuesRes.data) {
                     const transformedData = closeValuesRes.data.map(item => {
                         const dataPoint: TransformedData = { date: item.date };
                         Object.entries(item).forEach(([key, value]) => {
@@ -192,10 +253,27 @@ export default function SalesDashboard() {
                     setSalesData(transformedData);
                 }
     
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                if (!isNew) {
-                    setError('Failed to load portfolio data');
+            } catch (error: unknown) {
+                // Handle specific Axios error
+                if (axios.isAxiosError(error)) {
+                    if (error.response?.status === 403) {
+                        // Skip the error for no stocks case
+                        console.log('User has no stocks. Skipping error display.');
+                        setTopStock({ stockName: '', performance: 0 });
+                        setPortfolioValue({ value: 0, isPositive: true });
+                        setQuantityData([]);
+                        setTableVal([]);
+                        setSalesData([]);
+                        setIsNewUser(true);  // You could also mark as new if needed
+                    } else {
+                        // Handle other Axios errors (e.g., network issues)
+                        console.error('Failed to load data:', error);
+                        setError('Failed to load portfolio data');
+                    }
+                } else {
+                    // Handle unexpected non-Axios errors
+                    console.error('Unexpected error:', error);
+                    setError('An unexpected error occurred');
                 }
             } finally {
                 setIsLoading(false);
@@ -205,7 +283,6 @@ export default function SalesDashboard() {
         fetchData();
     }, [userID]);
     
-
     const processedQuantityData = React.useMemo(() => {
         if (!quantityData.length) return [];
 
@@ -458,6 +535,9 @@ export default function SalesDashboard() {
                     quantity: parseInt(formData.quantity)
                 }
             });
+    
+            // Set isNewUser to false since we now have data
+            setIsNewUser(false);
     
             // Update local table state
             const newStock = {

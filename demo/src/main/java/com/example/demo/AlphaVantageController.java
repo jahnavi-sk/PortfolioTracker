@@ -33,7 +33,7 @@ public class AlphaVantageController {
         for (String ticker : tickers) {
 
             Map<String, String> closeValues = alphaVantageService.getCloseValues(ticker);
-            //System.out.println("closeValues = "+ closeValues);
+            System.out.println("closeValues = "+ closeValues);
             // Group close values by date
             for (Map.Entry<String, String> entry : closeValues.entrySet()) {
                 String date = entry.getKey();

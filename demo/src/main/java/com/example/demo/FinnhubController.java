@@ -30,7 +30,8 @@ public class FinnhubController {
     @PutMapping("/user/updateQStock")
     public ResponseEntity<String> updateQStock(
         @RequestParam int userId, 
-        @RequestParam String ticker,
+        @RequestParam String
+        ticker,
         @RequestParam int quantity) {
         
         System.out.println("Inside update!");
