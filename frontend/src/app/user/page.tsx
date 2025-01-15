@@ -80,6 +80,7 @@ interface QuantityData {
 
 export default function SalesDashboard() {
     const [topStock, setTopStock] = useState({ stockName: '', performance: 0 });
+    
     const [portfolioValue, setPortfolioValue] = useState({ value: 0, isPositive: true });
     const [salesData, setSalesData] = useState<TransformedData[]>([]);
     const [quantityData, setQuantityData] = useState<QuantityData[]>([]);
@@ -322,7 +323,7 @@ export default function SalesDashboard() {
 
         inactivityTimerRef.current = setTimeout(() => {
             handleLogout();
-        }, 60000); // 1 minute
+        }, 300000); // 1 minute
     };
 
 
@@ -989,6 +990,7 @@ export default function SalesDashboard() {
                 <TableHead>Stock Name</TableHead>
                 <TableHead className="text-right">Buying Price</TableHead>
                 <TableHead className="text-right">Closing Price</TableHead>
+                <TableHead className="text-right">Profit</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -1013,6 +1015,11 @@ export default function SalesDashboard() {
                                         <TableCell className="text-right">
                                             ${typeof stock.closingPrice === 'number' 
                                                 ? stock.closingPrice.toFixed(2) 
+                                                : '0.00'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            ${typeof stock.closingPrice === 'number'  && typeof stock.buyingPrice==='number'
+                                                ? (stock.closingPrice.toFixed(2) - stock.buyingPrice.toFixed(2)).toFixed(2)
                                                 : '0.00'}
                                         </TableCell>
                                         <TableCell className="text-right">{stock.quantity}</TableCell>

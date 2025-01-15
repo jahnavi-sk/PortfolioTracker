@@ -74,7 +74,10 @@ public class FinnhubController {
     @GetMapping("/user/topStock")
     public Map<String, Object> getTopStock(@RequestParam int userId) {
         List<Map<String, Object>> userTickerDetails = userTickerService.getUserTickerDetails(userId);
+        Double total_buying_price =0.0;
+        Double total_closing_price=0.0;
 
+        
         // Prepare list of tickers
         String[] tickers = userTickerDetails.stream()
                 .map(details -> (String) details.get("ticker"))
@@ -99,9 +102,10 @@ public class FinnhubController {
                 if (buyingPriceObj instanceof Number) {
                     buyingPrice = ((Number) buyingPriceObj).doubleValue();
                 }
+                total_buying_price += buyingPrice;
+                total_closing_price += current_price;
 
                 Double performance = ((current_price - buyingPrice) / buyingPrice) * 100;
-
                 String name = (String) userTicker.get("stockName");
 
                 // Add extra user data to the combined result
@@ -112,6 +116,9 @@ public class FinnhubController {
             }
         }
 
+
+        Double total_user_performance = ((total_closing_price - total_buying_price)/ total_buying_price)*100;
+
         // Sort by performance in descending order
         combinedResults.sort((Map<String, Object> a, Map<String, Object> b) -> {
             Double performanceA = (Double) a.get("performance");
@@ -119,13 +126,23 @@ public class FinnhubController {
             return performanceB.compareTo(performanceA); // Sorting in descending order
         });
 
-        // Return the top stock's name and performance as a map
-        Map<String, Object> topStock = combinedResults.get(0);
         Map<String, Object> result = new HashMap<>();
-        result.put("stockName", topStock.get("stockName"));
-        result.put("performance", topStock.get("performance"));
+        // Return the top stock's name and performance as a map
+        if(combinedResults.size()!=0){
+            Map<String, Object> topStock = combinedResults.get(0);
+            //Map<String, Object> result = new HashMap<>();
+            result.put("stockName", topStock.get("stockName"));
+            result.put("performance", topStock.get("performance"));
+            result.put("userPerformance", total_user_performance);
+        }
+        else{
+              result.put("stockName","");
+              result.put("performance",0);
+              result.put("userPerformance", total_user_performance);
 
-        return result;
+
+        }
+        return result;  
     }
 
     
