@@ -78,8 +78,23 @@ interface QuantityData {
     color: string;
   }
 
+  interface Stock {
+    ticker: string;
+    stockName: string;
+    buyingPrice: number;
+    closingPrice: number;
+    quantity: number;
+  }
+  
+  interface StockTableProps {
+    tableVal: Stock[];
+    isLoading: boolean;
+    handleEdit: (ticker: string) => void;
+    handleDeleteClick: (ticker: string) => void;
+  }
+
 export default function SalesDashboard() {
-    const [topStock, setTopStock] = useState({ stockName: '', performance: 0 });
+    const [topStock, setTopStock] = useState({ stockName: '', performance: 0 , userPerformance: 0});
     
     const [portfolioValue, setPortfolioValue] = useState({ value: 0, isPositive: true });
     const [salesData, setSalesData] = useState<TransformedData[]>([]);
@@ -648,6 +663,8 @@ export default function SalesDashboard() {
         </TableRow>
     );
 
+
+
     
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -730,7 +747,7 @@ export default function SalesDashboard() {
                             <p className="text-sm text-gray-500">Performance</p>
                             <div className="flex items-center space-x-2">
                                 <h2 className="text-3xl font-bold">
-                                    {isNewUser ? "0.00%" : `${topStock.performance.toFixed(2)}%`}
+                                    {isNewUser ? "0.00%" : `${topStock.userPerformance.toFixed(2)}%`}
                                 </h2>
                                 <div className="flex items-center text-gray-500 text-sm">
                                     {isNewUser ? (
@@ -995,58 +1012,82 @@ export default function SalesDashboard() {
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8">
-                                        Loading data...
-                                    </TableCell>
-                                </TableRow>
-                            ) : tableVal.length > 0 ? (
-                                tableVal.map((stock) => (
-                                    <TableRow key={stock.ticker}>
-                                        <TableCell className="font-medium">{stock.ticker}</TableCell>
-                                        <TableCell>{stock.stockName}</TableCell>
-                                        <TableCell className="text-right">
-                                            ${typeof stock.buyingPrice === 'number' 
-                                                ? stock.buyingPrice.toFixed(2) 
-                                                : '0.00'}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            ${typeof stock.closingPrice === 'number' 
-                                                ? stock.closingPrice.toFixed(2) 
-                                                : '0.00'}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            ${typeof stock.closingPrice === 'number'  && typeof stock.buyingPrice==='number'
-                                                ? (stock.closingPrice.toFixed(2) - stock.buyingPrice.toFixed(2)).toFixed(2)
-                                                : '0.00'}
-                                        </TableCell>
-                                        <TableCell className="text-right">{stock.quantity}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleEdit(stock.ticker)}
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDeleteClick(stock.ticker)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ):(
-                                <EmptyTable />
-                            )}
-                        </TableBody>
+           
+<TableBody>
+  {isLoading ? (
+    <TableRow>
+      <TableCell colSpan={6} className="text-center py-8">
+        Loading data...
+      </TableCell>
+    </TableRow>
+  ) : tableVal.length > 0 ? (
+    [...tableVal]
+      .sort((a, b) => {
+        const profitA = Number(a.closingPrice) - Number(a.buyingPrice);
+        const profitB = Number(b.closingPrice) - Number(b.buyingPrice);
+        return profitB - profitA; // Sort in descending order (highest profit first)
+      })
+      .map((stock,index) => (
+        <TableRow key={stock.ticker} className={`
+            ${index === 0 
+              ? 'bg-emerald-600 hover:bg-gray-700 transition-colors duration-200' 
+              : 'hover:bg-gray-700 transition-colors duration-200'
+            }
+            ${index === 0 && 'relative'}
+          `}>
+          {/* <TableCell className="font-medium">{stock.ticker}</TableCell> */}
+          <TableCell className="font-medium">
+            {index === 0 && (
+              <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-4/5 bg-emerald-500 rounded-r" />
+            )}
+            {stock.ticker}
+            {index === 0 && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                Top Performer
+              </span>
+            )}
+          </TableCell>
+          <TableCell>{stock.stockName}</TableCell>
+          <TableCell className="text-right">
+            ${typeof stock.buyingPrice === 'number' 
+              ? stock.buyingPrice.toFixed(2) 
+              : '0.00'}
+          </TableCell>
+          <TableCell className="text-right">
+            ${typeof stock.closingPrice === 'number' 
+              ? stock.closingPrice.toFixed(2) 
+              : '0.00'}
+          </TableCell>
+          <TableCell className="text-right">
+            ${typeof stock.closingPrice === 'number' && typeof stock.buyingPrice === 'number'
+              ? (stock.closingPrice - stock.buyingPrice).toFixed(2)
+              : '0.00'}
+          </TableCell>
+          <TableCell className="text-right">{stock.quantity}</TableCell>
+          <TableCell className="text-right">
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEdit(stock.ticker)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDeleteClick(stock.ticker)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </TableCell>
+        </TableRow>
+      ))
+  ) : (
+    <EmptyTable />
+  )}
+</TableBody>
           </Table>
         </div>
       </CardContent>
