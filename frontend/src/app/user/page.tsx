@@ -86,13 +86,7 @@ interface QuantityData {
     quantity: number;
   }
   
-  interface StockTableProps {
-    tableVal: Stock[];
-    isLoading: boolean;
-    handleEdit: (ticker: string) => void;
-    handleDeleteClick: (ticker: string) => void;
-  }
-
+  
 export default function SalesDashboard() {
     const [topStock, setTopStock] = useState({ stockName: '', performance: 0 , userPerformance: 0});
     
@@ -109,8 +103,8 @@ export default function SalesDashboard() {
     const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
     const router = useRouter();
     const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
-    //const { userID } = router.
-    //const userID = '1010';
+    const [isActionInProgress, setIsActionInProgress] = useState(false);
+    const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [userID, setUserID] = useState<string | null>(null);
     const [isNewUser, setIsNewUser] = useState(false);
     
@@ -158,68 +152,23 @@ export default function SalesDashboard() {
 
     
     
-    // useEffect(() => {
-    //     if (!userID) return;
-    
-    //     let isNew = false;
-    //     const fetchData = async () => {
-    //         try {
-    //             const [
-    //                 topStockRes,
-    //                 portfolioRes,
-    //                 statusRes,
-    //                 closeValuesRes,
-    //                 quantityRes,
-    //                 tableRes,
-    //             ] = await Promise.all([
-    //                 axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
-    //                 axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
-    //                 axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
-    //                 axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`),
-    //                 axios.get<QuantityData[]>(`http://localhost:8080/api/user/quantity?userId=${userID}`),
-    //                 axios.get<StockDetail[]>(`http://localhost:8080/api/user/details?userId=${userID}`)
-    //             ]);
-    
-    //             // Update isNewUser based on table data
-    //             isNew = !tableRes.data || tableRes.data.length === 0;
-    //             setIsNewUser(isNew);
-    
-    //             // Always update the states, even if the user is new
-    //             setTopStock(topStockRes.data || { stockName: '', performance: 0 });
-    //             setPortfolioValue({
-    //                 value: portfolioRes.data || 0,
-    //                 isPositive: statusRes.data || true
-    //             });
-    //             setQuantityData(quantityRes.data || []);
-    //             setTableVal(tableRes.data || []);
-    
-    //             if (closeValuesRes.data) {
-    //                 const transformedData = closeValuesRes.data.map(item => {
-    //                     const dataPoint: TransformedData = { date: item.date };
-    //                     Object.entries(item).forEach(([key, value]) => {
-    //                         if (key !== 'date' && typeof value === 'string') {
-    //                             dataPoint[key] = parseFloat(value);
-    //                         }
-    //                     });
-    //                     return dataPoint;
-    //                 });
-    //                 setSalesData(transformedData);
-    //             }
-    
-    //         } catch (error) {
-    //             console.error('Error fetching data:', error);
-    //             if (!isNew) {
-    //                 setError('Failed to load portfolio data');
-    //             }
-    //         } finally {
-    //             setIsLoading(false);
-    //         }
-    //     };
-    
-    //     fetchData();
-    // }, [userID]);
 
+    useEffect(() => {
+        // Initial fetch
+        fetchDashboardData();
 
+        // Set up refresh interval
+        refreshIntervalRef.current = setInterval(() => {
+            fetchDashboardData();
+        }, 300000); // 5 minutes
+
+        // Cleanup
+        return () => {
+            if (refreshIntervalRef.current) {
+                clearInterval(refreshIntervalRef.current);
+            }
+        };
+    }, [userID, isActionInProgress]);
 
     useEffect(() => {
         if (!userID) return;
@@ -275,7 +224,7 @@ export default function SalesDashboard() {
                     if (error.response?.status === 403) {
                         // Skip the error for no stocks case
                         console.log('User has no stocks. Skipping error display.');
-                        setTopStock({ stockName: '', performance: 0 });
+                        setTopStock({ stockName: '', performance: 0,userPerformance: 0});
                         setPortfolioValue({ value: 0, isPositive: true });
                         setQuantityData([]);
                         setTableVal([]);
@@ -315,10 +264,7 @@ export default function SalesDashboard() {
     const dataKeys = salesData.length > 0 
         ? Object.keys(salesData[0]).filter(key => key !== 'date')
         : [];
-    //const dataKeys = Object.keys(salesData[0]).filter(key => key !== 'month');
-
     
-
     const handleLogout = () => {
         // Add your logout logic here
         if (inactivityTimerRef.current) {
@@ -338,17 +284,21 @@ export default function SalesDashboard() {
 
         inactivityTimerRef.current = setTimeout(() => {
             handleLogout();
-        }, 300000); // 1 minute
+        }, 900000); // 15 minute
     };
 
 
     
     const handleDeleteClick = (ticker: string) => {
         setStockToDelete(ticker);
+        setIsActionInProgress(true);
     };
     
     const handleConfirmDelete = async () => {
-        if (!stockToDelete) return;
+        if (!stockToDelete) {
+            setIsActionInProgress(false);
+            return;
+        }
         
         setIsLoading(true);
         try {
@@ -407,6 +357,7 @@ export default function SalesDashboard() {
     
     const handleEdit = (ticker: string) => {
         const stock = tableVal.find(s => s.ticker === ticker);
+        setIsActionInProgress(true);
         if (stock) {
             setEditingStock(stock);
             setNewQuantity(stock.quantity.toString());
@@ -416,7 +367,10 @@ export default function SalesDashboard() {
 
     const handleEditSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        if (!editingStock || !newQuantity) return;
+        if (!editingStock || !newQuantity) {
+            setIsActionInProgress(false);
+            return;
+        }
 
         try {
             await axios.put(`http://localhost:8080/api/user/updateQStock`, null, {
@@ -596,7 +550,7 @@ export default function SalesDashboard() {
                 isPositive: statusRes.data
             });
             setQuantityData(quantityRes.data);
-    
+            
             // Update sales data
             if (closeValuesRes.data) {
                 const transformedData = closeValuesRes.data.map(item => {
@@ -621,6 +575,7 @@ export default function SalesDashboard() {
             });
             setOpen(false);
             setError('');
+            setIsActionInProgress(false)
     
         } catch (error) {
             console.error('Error adding stock:', error);
@@ -630,12 +585,6 @@ export default function SalesDashboard() {
 
       
 
-
-      const LoadingCard = () => (
-        <div className="flex justify-center items-center h-24">
-            <p className="text-gray-500">Loading data...</p>
-        </div>
-    );
 
 
 
@@ -664,6 +613,55 @@ export default function SalesDashboard() {
     );
 
 
+    const fetchDashboardData = async () => {
+        if (!userID || isActionInProgress) return;
+
+        try {
+            setIsLoading(true);
+            const [
+                topStockRes,
+                portfolioRes,
+                statusRes,
+                closeValuesRes,
+                quantityRes,
+                tableRes,
+            ] = await Promise.all([
+                axios.get(`http://localhost:8080/api/user/topStock?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/portfolio?userId=${userID}`),
+                axios.get(`http://localhost:8080/api/user/status?userId=${userID}`),
+                axios.get<CloseValueData[]>(`http://localhost:8080/api/getCloseValues?userId=${userID}`),
+                axios.get<QuantityData[]>(`http://localhost:8080/api/user/quantity?userId=${userID}`),
+                axios.get<StockDetail[]>(`http://localhost:8080/api/user/details?userId=${userID}`)
+            ]);
+
+            setTopStock(topStockRes.data || { stockName: '', performance: 0, userPerformance: 0 });
+            setPortfolioValue({
+                value: portfolioRes.data || 0,
+                isPositive: statusRes.data || true
+            });
+            setQuantityData(quantityRes.data || []);
+            setTableVal(tableRes.data || []);
+
+            if (closeValuesRes.data) {
+                const transformedData = closeValuesRes.data.map(item => {
+                    const dataPoint: TransformedData = { date: item.date };
+                    Object.entries(item).forEach(([key, value]) => {
+                        if (key !== 'date' && typeof value === 'string') {
+                            dataPoint[key] = parseFloat(value);
+                        }
+                    });
+                    return dataPoint;
+                });
+                setSalesData(transformedData);
+            }
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+            setError('Failed to refresh dashboard data');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
 
     
   return (
@@ -747,15 +745,27 @@ export default function SalesDashboard() {
                             <p className="text-sm text-gray-500">Performance</p>
                             <div className="flex items-center space-x-2">
                                 <h2 className="text-3xl font-bold">
-                                    {isNewUser ? "0.00%" : `${topStock.userPerformance.toFixed(2)}%`}
+                                    {isNewUser || typeof topStock?.userPerformance !== 'number' 
+                                        ? "0.00%" 
+                                        : `${topStock.userPerformance.toFixed(2)}%`
+                                    }
                                 </h2>
                                 <div className="flex items-center text-gray-500 text-sm">
-                                    {isNewUser ? (
+                                    {isNewUser || typeof topStock?.userPerformance !== 'number' ? (
                                         "Add stocks to track performance"
                                     ) : (
                                         <>
-                                            <ArrowUpIcon className="h-4 w-4" />
-                                            <span>{topStock.stockName} is the top performing stock!</span>
+                                            {topStock.userPerformance >= 0 ? (
+                                                <>
+                                                    <ArrowUpIcon className="h-4 w-4 text-green-500" />
+                                                    <span className="text-green-500">Your stocks are looking good!</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ArrowDownIcon className="h-4 w-4 text-red-500" />
+                                                    <span className="text-red-500">There have been some losses</span>
+                                                </>
+                                            )}
                                         </>
                                     )}
                                 </div>
@@ -791,7 +801,23 @@ export default function SalesDashboard() {
               <p className="text-sm text-gray-500">Invest More?</p>
               <div className="flex items-center space-x-2">
                 
-              <Dialog open={open} onOpenChange={setOpen}>
+              <Dialog 
+    open={open} 
+    onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        setIsActionInProgress(isOpen); // Set action status based on dialog state
+        if (!isOpen) {
+            // Reset form data when dialog closes
+            setFormData({
+                stockName: '',
+                ticker: '',
+                quantity: '',
+                buyingPrice: '',
+                currentPrice: null
+            });
+        }
+    }}
+>
       <DialogTrigger asChild>
         <Button variant="outline" className="text-xl transition-transform transform hover:scale-110 active:scale-95 hover:text-lime-400">
           Add Stock
@@ -799,7 +825,7 @@ export default function SalesDashboard() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Stock</DialogTitle>
+          <DialogTitle onClick={()=>setIsActionInProgress(true)}>Add New Stock</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
