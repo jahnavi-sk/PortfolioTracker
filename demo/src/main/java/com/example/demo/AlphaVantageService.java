@@ -4,16 +4,17 @@ import java.util.*;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
+import org.springframework.beans.factory.annotation.Value;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class AlphaVantageService {
     private static final String API_URL = "https://www.alphavantage.co/query";
-    private static final String API_KEY= "NRRLKY9X1JKCHM1A";
-    //private static final String API_KEY = "JFH4KC9RWIWSGRY5"; // Replace with your API key
-
+   
+    @Value("${alphavantage.api.key}")// api key has limited accesses per day
+    private String API_KEY;
+    
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
@@ -22,6 +23,8 @@ public class AlphaVantageService {
         this.objectMapper = objectMapper;
     }
 
+
+    // api to get the past values using AlphaVantageController API
     public Map<String, String> getCloseValues(String symbol) {
         String url = String.format(
                 "%s?function=TIME_SERIES_DAILY&symbol=%s&apikey=%s",
@@ -29,14 +32,10 @@ public class AlphaVantageService {
         );
 
         try {
-            // Fetch data from the API
-            String response = restTemplate.getForObject(url, String.class);
 
-            // Parse the JSON response
+            String response = restTemplate.getForObject(url, String.class);
             JsonNode rootNode = objectMapper.readTree(response);
             JsonNode timeSeriesNode = rootNode.path("Time Series (Daily)");
-
-            // Extract the first 10 date-close pairs
             Map<String, String> dateCloseMap = new LinkedHashMap<>();
             int count = 0;
 

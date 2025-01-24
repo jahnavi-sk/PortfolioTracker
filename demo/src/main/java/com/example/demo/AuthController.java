@@ -22,11 +22,10 @@ public class AuthController {
         this.userTickerService = userTickerService;
     }
 
+
+    // api to handle signup
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signup(@RequestBody User user) {
-        System.out.println("hey im in signup!! all good here!!!!");
-        
-        
         String token = userService.signup(user);
         Integer id = userTickerService.getID(user.getUsername());
         Map<String, Object> response = new HashMap<>();
@@ -35,18 +34,16 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+
+    // api to handle login
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestParam String username, @RequestParam String password) {
-        System.out.println("hey im in /login!! all good here!!!!");
+        
         String token = userService.login(username, password);
-        System.out.println("username = "+ username);
-        System.out.println("password = "+ password);
         Integer id = userTickerService.getID(username);
-        System.out.println("id = "+ id);
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("userId", id);
-        System.out.println("response = "+ response);
         return ResponseEntity.ok(response);
     }
 }

@@ -52,12 +52,12 @@ interface StockDetail {
     stockName: string;
     buyingPrice: number;
     quantity: number;
-    closingPrice: number;
+    currentPrice: number;
   }
 
 interface CloseValueData {
     date: string;
-    [key: string]: string | number; // Allow string or number values for ticker prices
+    [key: string]: string | number; 
 }
 
 interface TransformedData {
@@ -71,20 +71,7 @@ interface QuantityData {
     quantity: number;
   }
   
-  interface ProcessedQuantityData {
-    ticker: string;
-    quantity: number;
-    value: number;
-    color: string;
-  }
-
-  interface Stock {
-    ticker: string;
-    stockName: string;
-    buyingPrice: number;
-    closingPrice: number;
-    quantity: number;
-  }
+ 
   
   
 export default function SalesDashboard() {
@@ -145,7 +132,7 @@ export default function SalesDashboard() {
     
     
     useEffect(() => {
-        // Get userId from localStorage at component mount
+       
         const storedUserId = localStorage.getItem('userId');
         setUserID(storedUserId);
     }, []);
@@ -229,14 +216,14 @@ export default function SalesDashboard() {
                         setQuantityData([]);
                         setTableVal([]);
                         setSalesData([]);
-                        setIsNewUser(true);  // You could also mark as new if needed
+                        setIsNewUser(true);  
                     } else {
-                        // Handle other Axios errors (e.g., network issues)
+                        
                         console.error('Failed to load data:', error);
                         setError('Failed to load portfolio data');
                     }
                 } else {
-                    // Handle unexpected non-Axios errors
+                    
                     console.error('Unexpected error:', error);
                     setError('An unexpected error occurred');
                 }
@@ -266,7 +253,6 @@ export default function SalesDashboard() {
         : [];
     
     const handleLogout = () => {
-        // Add your logout logic here
         if (inactivityTimerRef.current) {
             clearTimeout(inactivityTimerRef.current);
         }
@@ -435,18 +421,7 @@ export default function SalesDashboard() {
         setShowError(false);
       };
     
-    //   const handleCheckPrice = () => {
-    //     if (!formData.ticker || !formData.stockName) {
-    //       setShowError(true);
-    //       return;
-    //     }
-    //     // Simulating API call with a random float value for current price (or static like 100)
-    //     const simulatedPrice = (Math.random() * 100 + 50).toFixed(2); // Random number between 50 and 150
-    //     setFormData(prev => ({
-    //       ...prev,
-    //       currentPrice: parseFloat(simulatedPrice) // Set currentPrice as a float number
-    //     }));
-    //   };
+
 
     const handleCheckPrice = async () => {
         if (!formData.ticker || !formData.stockName) {
@@ -480,7 +455,7 @@ export default function SalesDashboard() {
           console.error("Error fetching stock price:", error);
           alert("Error: Unable to fetch stock price. Please try again.");
         }
-        console.log("hi")
+        
       };
       
     
@@ -515,7 +490,7 @@ export default function SalesDashboard() {
                 stockName: formData.stockName,
                 buyingPrice: parseFloat(priceResponse.data.currentPrice),
                 quantity: parseInt(formData.quantity),
-                closingPrice: parseFloat(priceResponse.data.currentPrice)
+                currentPrice: parseFloat(priceResponse.data.currentPrice)
             };
     
             setTableVal(prev => {
@@ -1049,8 +1024,8 @@ export default function SalesDashboard() {
   ) : tableVal.length > 0 ? (
     [...tableVal]
       .sort((a, b) => {
-        const profitA = Number(a.closingPrice) - Number(a.buyingPrice);
-        const profitB = Number(b.closingPrice) - Number(b.buyingPrice);
+        const profitA = Number(a.currentPrice) - Number(a.buyingPrice);
+        const profitB = Number(b.currentPrice) - Number(b.buyingPrice);
         return profitB - profitA; // Sort in descending order (highest profit first)
       })
       .map((stock,index) => (
@@ -1080,13 +1055,13 @@ export default function SalesDashboard() {
               : '0.00'}
           </TableCell>
           <TableCell className="text-right">
-            ${typeof stock.closingPrice === 'number' 
-              ? stock.closingPrice.toFixed(2) 
+            ${typeof stock.currentPrice === 'number' 
+              ? stock.currentPrice.toFixed(2) 
               : '0.00'}
           </TableCell>
           <TableCell className="text-right">
-            ${typeof stock.closingPrice === 'number' && typeof stock.buyingPrice === 'number'
-              ? (stock.closingPrice - stock.buyingPrice).toFixed(2)
+            ${typeof stock.currentPrice === 'number' && typeof stock.buyingPrice === 'number'
+              ? (stock.currentPrice - stock.buyingPrice).toFixed(2)
               : '0.00'}
           </TableCell>
           <TableCell className="text-right">{stock.quantity}</TableCell>

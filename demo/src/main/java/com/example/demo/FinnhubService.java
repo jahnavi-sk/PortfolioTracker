@@ -21,6 +21,7 @@ public class FinnhubService {
         this.restTemplate = restTemplate;
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> getStockData(String symbol) {
         return restTemplate.getForObject(FINNHUB_URL, Map.class, symbol, apiKey);
     }

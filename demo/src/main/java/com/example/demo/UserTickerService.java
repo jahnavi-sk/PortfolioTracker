@@ -22,6 +22,7 @@ public class UserTickerService {
         this.userTickerRepository = userTickerRepository;
     }
 
+    
     public List<Map<String, Object>> getTickerDetailsByUserId(int userId) {
         return userTickerRepository.findTickerDetailsByUserId(userId).stream()
                 .map(record -> {
@@ -34,8 +35,6 @@ public class UserTickerService {
                 .collect(Collectors.toList());
     }
 
-
-
     public List<Map<String, Object>> getQuantityDetails(int userId){
         return userTickerRepository.findQuantityDetails(userId).stream()
                 .map(record -> {
@@ -47,8 +46,6 @@ public class UserTickerService {
                 })
                 .collect(Collectors.toList());
     }
-
-
 
     public List<Map<String, Object>> getUserTickerDetails(int userId) {
         return userTickerRepository.findUserTickerDetails(userId).stream()
@@ -63,7 +60,6 @@ public class UserTickerService {
                 })
                 .collect(Collectors.toList());
     }
-
 
     public Integer getID(String username){
         return userTickerRepository.findUserID(username);

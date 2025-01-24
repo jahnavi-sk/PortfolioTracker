@@ -19,13 +19,14 @@ public class UserService {
     }
     
 
+    // signup function with token
     public String signup(User user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
-        System.out.println("im in signup babeeeeee!! all good here!!");
         return jwtUtil.generateToken(user.getUsername());
     }
 
+    // login function with token
     public String login(String username, String password) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
