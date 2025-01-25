@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*', // Proxy to your Spring Boot backend
+        destination: 'http://16.171.133.9:8080/api/:path*', // Proxy to your Spring Boot backend
       },
     ];
   },

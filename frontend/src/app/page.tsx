@@ -8,8 +8,6 @@ import { Label } from "../components/ui/label";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-// const words = `Welcome to your very own portfolio tracker. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque sed mi eu nibh tincidunt ultricies. Nunc varius nulla non velit egestas, et convallis odio tempus. Maecenas sit amet congue augue, nec lobortis est.`;
-
 const words = `Welcome to your very own portfolio tracker. We values our users highly and provide you variety of options. This application is one place where you  can track all your investments. After you have added transactions to the application, you can track daily changes in your investment values. Join us today!`;
 
 interface LabelInputContainerProps {
@@ -30,7 +28,7 @@ export default function AuthPage() {
   const [showText, setShowText] = useState(true);
   const router = useRouter();
 
-  const BASE_URL = "http://localhost:8080/api/auth";
+  const BASE_URL = "http://16.171.133.9:8080/api/auth";
 
   const [formData, setFormData] = useState({
     username: "",
@@ -39,14 +37,10 @@ export default function AuthPage() {
     confirmPassword: "",
   });
 
-
-  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
-
-  
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,13 +58,10 @@ export default function AuthPage() {
       });
 
       const { token, userId } = response.data;
-      
+
       localStorage.setItem("userId", userId);
       console.log("BEFORE PG USER ID = "+ userId);
-    alert("Signup successful!");
-    //setAuthToken(token, userId);
-      
-      
+      alert("Signup successful!");
       router.push(`/user?userId=${userId}`);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -86,7 +77,7 @@ export default function AuthPage() {
     e.preventDefault();
 
     try {
-      // Match the @RequestParam format expected by the backend
+     
       const params = new URLSearchParams({
         username: formData.username,
         password: formData.password
@@ -95,10 +86,8 @@ export default function AuthPage() {
       const response = await axios.post(`${BASE_URL}/login?${params.toString()}`);
       const { token, userId } = response.data;
       localStorage.setItem("userId", userId);
-      //setAuthToken(token, userId);
       alert("Login successful!");
-      
-     router.push(`/user?userId=${userId}`);
+      router.push(`/user?userId=${userId}`);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         alert(`Login failed: ${error.response?.data?.message || error.message}`);
@@ -112,7 +101,7 @@ export default function AuthPage() {
   const handleShowLogin = () => {
     setShowLogin(true);
     setShowText(false);
-    // Reset form data when showing login
+   
     setFormData({
       username: "",
       email: "",
@@ -124,7 +113,7 @@ export default function AuthPage() {
   const handleShowSignup = () => {
     setShowSignup(true);
     setShowText(false);
-    // Reset form data when showing signup
+   
     setFormData({
       username: "",
       email: "",
@@ -137,7 +126,6 @@ export default function AuthPage() {
     setShowLogin(false);
     setShowSignup(false);
     setShowText(true);
-    // Reset form data when closing
     setFormData({
       username: "",
       email: "",
