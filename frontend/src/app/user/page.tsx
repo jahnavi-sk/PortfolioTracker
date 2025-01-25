@@ -85,7 +85,7 @@ export default function SalesDashboard() {
     const [editingStock, setEditingStock] = useState<StockDetail | null>(null);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [newQuantity, setNewQuantity] = useState('');
-    const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
+    const [inactivityTimer] = useState<NodeJS.Timeout | null>(null);
     const router = useRouter();
     const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
     const [isActionInProgress, setIsActionInProgress] = useState(false);
@@ -102,7 +102,7 @@ export default function SalesDashboard() {
     
     const [showError, setShowError] = useState(false);
     const [open, setOpen] = useState(false);
-    const BASE_URL = 'http://16.171.133.9:8080/api';
+    const BASE_URL = 'http://localhost:8080/api';
     
 
     
@@ -392,10 +392,7 @@ export default function SalesDashboard() {
         }
         try{
             setShowError(false);
-            console.log("here babe!!")
             const response = await axios.get(`${BASE_URL}/stock/price?symbol=${formData.ticker}`)
-            console.log("responese = " + response.data);
-          
             if (response.data.error) {
             throw new Error("Failed to fetch stock price. Please check the ticker symbol.");
             }
@@ -522,7 +519,7 @@ export default function SalesDashboard() {
         <TableRow>
             <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                 <p className="text-lg mb-2">No stocks in your portfolio</p>
-                <p className="text-sm">Click "Add Stock" to get started</p>
+                <p className="text-sm">Click Add Stock to get started</p>
             </TableCell>
         </TableRow>
     );

@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext,useState, ReactNode } from "react";
+import { useState, ReactNode } from "react";
 import { TextGenerateEffect } from "../components/ui/text-generate-effect";
 import { WavyBackground } from "../components/ui/wavy-background";
 import { Button } from "../components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "../components/ui/label";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-const words = `Welcome to your very own portfolio tracker. We values our users highly and provide you variety of options. This application is one place where you  can track all your investments. After you have added transactions to the application, you can track daily changes in your investment values. Join us today!`;
+const words = `Welcome to your very own portfolio tracker! We highly value our users and offer a variety of options. This application serves as a single platform where you can track all your investments. Once you add transactions to the application, you can monitor daily changes in your investment values. Join us today!`;
 
 interface LabelInputContainerProps {
   children: ReactNode;
@@ -28,7 +28,7 @@ export default function AuthPage() {
   const [showText, setShowText] = useState(true);
   const router = useRouter();
 
-  const BASE_URL = "http://16.171.133.9:8080/api/auth";
+  const BASE_URL = "http://localhost:8080/api/auth";
 
   const [formData, setFormData] = useState({
     username: "",
@@ -57,7 +57,7 @@ export default function AuthPage() {
         password: formData.password,
       });
 
-      const { token, userId } = response.data;
+      const { userId } = response.data;
 
       localStorage.setItem("userId", userId);
       console.log("BEFORE PG USER ID = "+ userId);
