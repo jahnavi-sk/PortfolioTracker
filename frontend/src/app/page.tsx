@@ -28,7 +28,7 @@ export default function AuthPage() {
   const [showText, setShowText] = useState(true);
   const router = useRouter();
 
-  const BASE_URL = "http://localhost:8080/api/auth";
+  const BASE_URL = "http://16.171.133.9:8080/api/auth";
 
   const [formData, setFormData] = useState({
     username: "",
