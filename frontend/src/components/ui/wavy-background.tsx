@@ -3,6 +3,18 @@ import { cn } from "@/lib/utils";
 import React, { useEffect, useRef, useState } from "react";
 import { createNoise3D } from "simplex-noise";
 
+type WavyBackgroundProps = {
+  children?: React.ReactNode;
+  className?: string;
+  containerClassName?: string;
+  colors?: string[];
+  waveWidth?: number;
+  backgroundFill?: string;
+  blur?: number;
+  speed?: "slow" | "fast";
+  waveOpacity?: number;
+} & React.HTMLAttributes<HTMLDivElement>;
+
 export const WavyBackground = ({
   children,
   className,
@@ -14,18 +26,7 @@ export const WavyBackground = ({
   speed = "fast",
   waveOpacity = 0.5,
   ...props
-}: {
-  children?: React.ReactNode;
-  className?: string;
-  containerClassName?: string;
-  colors?: string[];
-  waveWidth?: number;
-  backgroundFill?: string;
-  blur?: number;
-  speed?: "slow" | "fast";
-  waveOpacity?: number;
-  [key: string]: any;
-}) => {
+}: WavyBackgroundProps) => {
   const noise = createNoise3D();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [animationId, setAnimationId] = useState<number | null>(null);
@@ -44,15 +45,12 @@ export const WavyBackground = ({
   const init = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     const w = ctx.canvas.width = window.innerWidth;
     const h = ctx.canvas.height = window.innerHeight;
     ctx.filter = `blur(${blur}px)`;
     let nt = 0;
-
     const waveColors = colors ?? [
       "#38bdf8",
       "#818cf8",
@@ -89,8 +87,6 @@ export const WavyBackground = ({
 
     window.onresize = function () {
       if (!canvas || !ctx) return;
-      const newW = ctx.canvas.width = window.innerWidth;
-      const newH = ctx.canvas.height = window.innerHeight;
       ctx.filter = `blur(${blur}px)`;
     };
   };
@@ -120,6 +116,7 @@ export const WavyBackground = ({
         "h-screen flex flex-col items-center justify-center",
         containerClassName
       )}
+      {...props}
     >
       <canvas
         className="absolute inset-0 z-0"
@@ -129,7 +126,7 @@ export const WavyBackground = ({
           ...(isSafari ? { filter: `blur(${blur}px)` } : {}),
         }}
       ></canvas>
-      <div className={cn("relative z-10", className)} {...props}>
+      <div className={cn("relative z-10", className)}>
         {children}
       </div>
     </div>

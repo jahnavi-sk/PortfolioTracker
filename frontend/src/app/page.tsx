@@ -84,7 +84,7 @@ export default function AuthPage() {
       });
       
       const response = await axios.post(`${BASE_URL}/login?${params.toString()}`);
-      const { token, userId } = response.data;
+      const { userId } = response.data;
       localStorage.setItem("userId", userId);
       alert("Login successful!");
       router.push(`/user?userId=${userId}`);
