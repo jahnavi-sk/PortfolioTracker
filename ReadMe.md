@@ -33,23 +33,21 @@ This table stores user information.
 
  Column Name | Data Type | Constraints | 
  --- | --- | --- | 
- user_id | INT | Primary Key, Auto Increment (starts at 1000)
- | 
- username |  VARCHAR(18) | Not Null, Unique
- password | VARCHAR(100) | Not Null
- email | VARCHAR(50) | Not Null, Unique
+ user_id | INT | Primary Key, Auto Increment (starts at 1000) | 
+ username |  VARCHAR(18) | Not Null, Unique |
+ password | VARCHAR(100) | Not Null |
+ email | VARCHAR(50) | Not Null, Unique |
 
 2) Table: **user_ticker**
 
  Column Name | Data Type | Constraints | 
  --- | --- | --- | 
- id | INT | Primary Key, Auto Increment 
- | 
- user_id |  INT | Foreign Key (references ```users.user_id```)
- ticker | VARCHAR(10) | Not Null
- stock_name | VARCHAR(80) | Not Null
- buying_price | DOUBLE | 
- quantity | DOUBLE
+ id | INT | Primary Key, Auto Increment | 
+ user_id |  INT | Foreign Key (references ```users.user_id```) |
+ ticker | VARCHAR(10) | Not Null |
+ stock_name | VARCHAR(80) | Not Null |
+ buying_price | DOUBLE | |
+ quantity | DOUBLE | |
 
 
 ## Additional API's used
