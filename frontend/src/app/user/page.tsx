@@ -102,7 +102,7 @@ export default function SalesDashboard() {
     
     const [showError, setShowError] = useState(false);
     const [open, setOpen] = useState(false);
-    const BASE_URL = 'http://16.171.133.9:8080/api';
+    const BASE_URL = 'https://portfoliobackend.zapto.org/api';
     
 
     
